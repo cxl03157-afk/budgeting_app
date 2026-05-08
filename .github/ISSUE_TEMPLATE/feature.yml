@@ -1,0 +1,30 @@
+name: 機能追加
+description: 新しい機能の追加を提案する
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: purpose
+    attributes:
+      label: 目的
+      description: この機能が必要な理由・背景を説明してください
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 実装内容
+      description: 何を作るか具体的に記載してください
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 完了条件
+      description: この Issue が完了したと判断できる条件を箇条書きで記載してください
+      placeholder: |
+        - [ ] ○○ができる
+        - [ ] ○○が表示される
+    validations:
+      required: true
