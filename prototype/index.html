@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Budgeting App</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ===== サイドバー ===== -->
+  <aside id="sidebar">
+    <div class="logo">💰 Budgeting App</div>
+    <nav>
+      <button class="nav-btn active" data-section="dashboard">🏠 ダッシュボード</button>
+      <button class="nav-btn" data-section="transactions">📋 収支一覧</button>
+      <button class="nav-btn" data-section="categories">🏷️ カテゴリ</button>
+      <button class="nav-btn" data-section="budget">🎯 予算設定</button>
+      <button class="nav-btn" data-section="report">📊 グラフ</button>
+    </nav>
+    <div class="sidebar-footer">
+      <button id="darkModeToggle">🌙 ダークモード</button>
+    </div>
+  </aside>
+
+  <!-- ===== メインコンテンツ ===== -->
+  <main id="main">
+
+    <!-- 1. ダッシュボード -->
+    <section id="dashboard" class="section">
+      <div class="page-header">
+        <h1 class="page-title">ダッシュボード</h1>
+        <div class="period-selector-wrap">
+          <div class="period-selector">
+            <button class="period-btn active" data-period="month">今月</button>
+            <button class="period-btn" data-period="week">今週</button>
+            <button class="period-btn" data-period="year">今年</button>
+            <button class="period-btn" data-period="custom-month">月選択</button>
+            <button class="period-btn" data-period="custom-year">年選択</button>
+          </div>
+          <div id="periodRange" class="period-range"></div>
+          <!-- 月選択時のみ表示 -->
+          <div id="dashCustomMonth" class="dash-custom-period hidden">
+            <select id="dashYear" onchange="onDashCustomMonthChange()"></select>
+            <select id="dashMonthSel" onchange="onDashCustomMonthChange()">
+              <option value="">月を選択</option>
+              <option value="01">1月</option>
+              <option value="02">2月</option>
+              <option value="03">3月</option>
+              <option value="04">4月</option>
+              <option value="05">5月</option>
+              <option value="06">6月</option>
+              <option value="07">7月</option>
+              <option value="08">8月</option>
+              <option value="09">9月</option>
+              <option value="10">10月</option>
+              <option value="11">11月</option>
+              <option value="12">12月</option>
+            </select>
+          </div>
+          <!-- 年選択時のみ表示 -->
+          <div id="dashCustomYear" class="dash-custom-period hidden">
+            <select id="dashYearOnly" onchange="onDashCustomYearChange()"></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- アラートバナー -->
+      <div id="alertBanner" class="alert-banner hidden">
+        ⚠️ 支出が予算を超過しています
+      </div>
+
+      <!-- サマリーカード -->
+      <div class="summary-grid">
+        <div class="summary-card income">
+          <div class="card-label">収入合計</div>
+          <div class="card-amount" id="totalIncome">¥0</div>
+        </div>
+        <div class="summary-card expense">
+          <div class="card-label">支出合計</div>
+          <div class="card-amount" id="totalExpense">¥0</div>
+        </div>
+        <div class="summary-card balance">
+          <div class="card-label">残高</div>
+          <div class="card-amount" id="totalBalance">¥0</div>
+        </div>
+      </div>
+
+      <!-- カテゴリ別内訳 -->
+      <div class="card">
+        <h2 class="card-title">カテゴリ別内訳</h2>
+        <table class="tx-table">
+          <thead>
+            <tr>
+              <th>区分</th>
+              <th>カテゴリ</th>
+              <th style="text-align:right">金額</th>
+              <th style="text-align:right">割合</th>
+            </tr>
+          </thead>
+          <tbody id="catBreakdownList"></tbody>
+        </table>
+        <div id="catBreakdownEmpty" class="empty-state hidden">データがありません</div>
+      </div>
+    </section>
+
+    <!-- 2. 収支一覧 -->
+    <section id="transactions" class="section hidden">
+      <div class="page-header">
+        <h1 class="page-title">収支一覧</h1>
+        <button class="btn-primary" onclick="openModal()">＋ 新規登録</button>
+      </div>
+
+      <!-- フィルター（選択即時反映） -->
+      <div class="card filter-bar">
+        <select id="filterType" onchange="applyFilter()">
+          <option value="all">すべて</option>
+          <option value="income">収入のみ</option>
+          <option value="expense">支出のみ</option>
+        </select>
+        <select id="filterCategory" onchange="onFilterCategoryChange()">
+          <option value="all">すべてのカテゴリ</option>
+        </select>
+        <select id="filterSubcategory" onchange="applyFilter()">
+          <option value="all">すべてのサブカテゴリ</option>
+        </select>
+        <select id="filterPeriod" onchange="onFilterPeriodChange()">
+          <option value="month">月別</option>
+          <option value="week">週別</option>
+          <option value="year">年別</option>
+        </select>
+        <select id="filterYear" onchange="applyFilter()">
+          <option value="">年を選択</option>
+        </select>
+        <span id="filterMonthWrap">
+          <select id="filterMonthSel" onchange="applyFilter()">
+            <option value="">月を選択</option>
+            <option value="01">1月</option>
+            <option value="02">2月</option>
+            <option value="03">3月</option>
+            <option value="04">4月</option>
+            <option value="05">5月</option>
+            <option value="06">6月</option>
+            <option value="07">7月</option>
+            <option value="08">8月</option>
+            <option value="09">9月</option>
+            <option value="10">10月</option>
+            <option value="11">11月</option>
+            <option value="12">12月</option>
+          </select>
+        </span>
+        <span id="filterWeekWrap" class="hidden">
+          <select id="filterWeek" onchange="applyFilter()">
+            <option value="">週を選択</option>
+            <option value="1">第1週（1〜7日）</option>
+            <option value="2">第2週（8〜14日）</option>
+            <option value="3">第3週（15〜21日）</option>
+            <option value="4">第4週（22〜28日）</option>
+            <option value="5">第5週（29日〜）</option>
+          </select>
+        </span>
+        <button class="btn-link" onclick="resetFilter()">リセット</button>
+      </div>
+
+      <!-- 合計表示 -->
+      <div class="filter-summary">
+        <span>収入: <strong id="filterIncome" class="income-text">¥0</strong></span>
+        <span>支出: <strong id="filterExpense" class="expense-text">¥0</strong></span>
+        <span>残高: <strong id="filterBalance">¥0</strong></span>
+      </div>
+
+      <!-- 取引一覧 -->
+      <div class="card">
+        <table class="tx-table">
+          <thead>
+            <tr>
+              <th>日付</th>
+              <th>区分</th>
+              <th>カテゴリ</th>
+              <th>サブカテゴリ</th>
+              <th>メモ</th>
+              <th>繰り返し</th>
+              <th>金額</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="txList"></tbody>
+        </table>
+        <div id="emptyTx" class="empty-state hidden">取引がありません</div>
+      </div>
+    </section>
+
+    <!-- 3. カテゴリ管理 -->
+    <section id="categories" class="section hidden">
+      <div class="page-header">
+        <h1 class="page-title">カテゴリ管理</h1>
+      </div>
+
+      <!-- カテゴリ追加フォーム -->
+      <div class="card">
+        <h2 class="card-title">カテゴリを追加</h2>
+        <div class="form-row">
+          <input type="text" id="newCatName" placeholder="カテゴリ名" maxlength="20">
+          <input type="color" id="newCatColor" value="#6366f1">
+          <select id="newCatType">
+            <option value="expense">支出</option>
+            <option value="income">収入</option>
+          </select>
+          <button class="btn-primary" onclick="addCategory()">追加</button>
+        </div>
+      </div>
+
+      <!-- カテゴリ一覧（サブカテゴリ含む） -->
+      <div class="card">
+        <h2 class="card-title">支出カテゴリ</h2>
+        <div id="expenseCatList" class="cat-grid"></div>
+      </div>
+      <div class="card">
+        <h2 class="card-title">収入カテゴリ</h2>
+        <div id="incomeCatList" class="cat-grid"></div>
+      </div>
+    </section>
+
+    <!-- 4. 予算設定 -->
+    <section id="budget" class="section hidden">
+      <div class="page-header">
+        <h1 class="page-title">予算設定</h1>
+      </div>
+
+      <div class="form-row" style="margin-bottom:1rem">
+        <select id="budgetViewType" onchange="onBudgetViewTypeChange()">
+          <option value="month">月別</option>
+          <option value="year">年別</option>
+        </select>
+      </div>
+
+      <!-- 月別ビュー -->
+      <div id="budgetMonthView">
+        <div class="card">
+          <h2 class="card-title">月間の総予算</h2>
+          <div class="form-row month-select-row">
+            <label>対象月:</label>
+            <div class="ym-selector">
+              <select id="budgetYear" onchange="renderBudget()"></select>
+              <select id="budgetMonthSel" onchange="renderBudget()">
+                <option value="">月を選択</option>
+                <option value="01">1月</option>
+                <option value="02">2月</option>
+                <option value="03">3月</option>
+                <option value="04">4月</option>
+                <option value="05">5月</option>
+                <option value="06">6月</option>
+                <option value="07">7月</option>
+                <option value="08">8月</option>
+                <option value="09">9月</option>
+                <option value="10">10月</option>
+                <option value="11">11月</option>
+                <option value="12">12月</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <span class="currency-label">¥</span>
+            <input type="number" id="budgetInput" placeholder="例: 150000" min="0">
+            <button class="btn-primary" onclick="saveBudget()">保存</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title" id="budgetStatusTitle">今月の状況</h2>
+          <div class="budget-status">
+            <div class="budget-row">
+              <span>収入合計</span>
+              <strong id="budgetIncome" class="income-text">¥0</strong>
+            </div>
+            <div class="budget-row">
+              <span>予算</span>
+              <strong id="budgetDisplay">¥0</strong>
+            </div>
+            <div class="budget-row">
+              <span>支出合計</span>
+              <strong id="budgetExpense" class="expense-text">¥0</strong>
+            </div>
+            <div class="budget-bar-wrap">
+              <div class="budget-bar">
+                <div class="budget-bar-fill" id="budgetBarFill" style="width: 0%"></div>
+              </div>
+              <span id="budgetPercent">0%</span>
+            </div>
+            <div id="budgetAlert" class="budget-alert hidden">⚠️ 予算を超過しています</div>
+            <div class="budget-row saving-row">
+              <span>🐷 可能な貯金額（収入 − 予算）</span>
+              <strong id="budgetSaving" class="saving-text">¥0</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 年別ビュー -->
+      <div id="budgetYearView" class="card hidden">
+        <div class="form-row" style="margin-bottom:1rem">
+          <label>対象年:</label>
+          <select id="budgetYearForYearView" onchange="renderBudgetYear()"></select>
+        </div>
+        <h2 class="card-title" id="budgetYearTitle">2026年の予算状況</h2>
+        <table class="tx-table">
+          <thead>
+            <tr>
+              <th>月</th>
+              <th style="text-align:right">収入</th>
+              <th style="text-align:right">予算</th>
+              <th style="text-align:right">支出</th>
+              <th style="text-align:right">残り</th>
+              <th style="text-align:right">達成率</th>
+            </tr>
+          </thead>
+          <tbody id="budgetYearList"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 5. グラフ・レポート -->
+    <section id="report" class="section hidden">
+      <div class="page-header">
+        <h1 class="page-title">グラフ・レポート</h1>
+        <div class="report-controls">
+          <select id="reportPeriodType" onchange="onReportPeriodTypeChange()">
+            <option value="month">月別</option>
+            <option value="year">年別</option>
+          </select>
+          <select id="reportType" onchange="renderReport()">
+            <option value="expense">支出のみ</option>
+            <option value="income">収入のみ</option>
+          </select>
+          <div class="ym-selector">
+            <select id="reportYear" onchange="renderReport()"></select>
+            <select id="reportMonthSel" onchange="renderReport()">
+              <option value="">月を選択</option>
+              <option value="01">1月</option>
+              <option value="02">2月</option>
+              <option value="03">3月</option>
+              <option value="04">4月</option>
+              <option value="05">5月</option>
+              <option value="06">6月</option>
+              <option value="07">7月</option>
+              <option value="08">8月</option>
+              <option value="09">9月</option>
+              <option value="10">10月</option>
+              <option value="11">11月</option>
+              <option value="12">12月</option>
+            </select>
+          </div>
+          <button class="btn-secondary" onclick="exportCSV()">📥 CSVエクスポート</button>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="card">
+          <h2 class="card-title">カテゴリ別内訳</h2>
+          <div class="chart-container">
+            <canvas id="donutChart"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">推移</h2>
+            <div class="chart-toggle" id="chartToggleWrap">
+              <button class="toggle-btn active" id="dailyBtn" onclick="setChartMode('daily')">日別</button>
+              <button class="toggle-btn" id="weeklyBtn" onclick="setChartMode('weekly')">週別</button>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="barChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== 収支登録・編集モーダル ===== -->
+  <div id="modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">収支を登録</h2>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+
+      <div class="form-group">
+        <label>区分</label>
+        <div class="type-toggle">
+          <button class="type-btn active" data-type="expense" id="typeExpenseBtn">支出</button>
+          <button class="type-btn" data-type="income" id="typeIncomeBtn">収入</button>
+        </div>
+        <input type="hidden" id="txType" value="expense">
+      </div>
+
+      <div class="form-group">
+        <label>金額 <span class="required">*</span></label>
+        <div class="input-prefix">
+          <span>¥</span>
+          <input type="number" id="txAmount" placeholder="0" min="1">
+        </div>
+        <div class="field-error hidden" id="amountError">金額を入力してください</div>
+      </div>
+
+      <div class="form-group">
+        <label>日付 <span class="required">*</span></label>
+        <input type="date" id="txDate">
+      </div>
+
+      <div class="form-group">
+        <label>カテゴリ</label>
+        <select id="txCategory"></select>
+      </div>
+
+      <div class="form-group">
+        <label>サブカテゴリ</label>
+        <select id="txSubcategory">
+          <option value="">サブカテゴリなし</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>メモ</label>
+        <input type="text" id="txMemo" placeholder="任意" maxlength="100">
+      </div>
+
+      <div class="form-group">
+        <label>繰り返し</label>
+        <select id="txRecurring">
+          <option value="none">なし</option>
+          <option value="weekly">毎週</option>
+          <option value="monthly">毎月</option>
+        </select>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-danger hidden" id="deleteBtn" onclick="deleteTransaction()">削除</button>
+        <button class="btn-secondary" onclick="closeModal()">キャンセル</button>
+        <button class="btn-primary" onclick="saveTransaction()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
