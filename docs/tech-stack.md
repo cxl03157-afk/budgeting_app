@@ -2,11 +2,14 @@
 
 ## 1. 技術スタック概要
 
-| レイヤー | 技術 | バージョン目安 |
-|---------|------|-------------|
+| レイヤー | 技術 | バージョン |
+|---------|------|-----------|
 | フロントエンド | Vue.js 3 + TypeScript + Vuetify 3 | Vue 3.4 / Vuetify 3.x |
-| バックエンド | Python + FastAPI + SQLAlchemy | Python 3.12 / FastAPI 0.110+ |
-| データベース | MySQL | 8.0 |
+| バックエンド | Python + FastAPI + SQLAlchemy | Python 3.12 / FastAPI 0.115 / SQLAlchemy 2.0 |
+| バリデーション | Pydantic | 2.7.x |
+| マイグレーション | Alembic | 1.13.x |
+| MySQL ドライバー | PyMySQL | 1.1.x |
+| データベース | MySQL | 8.4 LTS（EOL 2032年4月） |
 | インフラ（AWS） | S3+CloudFront / EC2 t2.micro / RDS db.t3.micro | — |
 | プロトタイプ | Vanilla JS + localStorage | — |
 
@@ -60,11 +63,12 @@
 
 ## 4. データベース
 
-### MySQL 8.0
+### MySQL 8.4 LTS
 
 | 項目 | 内容 |
 |------|------|
 | 選定理由 | AWS RDS の無料枠（db.t3.micro）で運用可能。実務でも普及率が高く SQL 学習に適している |
+| バージョン根拠 | MySQL 8.0 は 2026年4月30日 EOL。8.4 LTS は EOL 2032年4月で長期サポート対象 |
 | 文字コード | utf8mb4（絵文字・日本語対応） |
 | ストレージエンジン | InnoDB（トランザクション・外部キー制約）|
 
