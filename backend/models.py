@@ -14,7 +14,7 @@ class Category(Base):
     is_default: Mapped[int] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
-    subcategories: Mapped[list["Subcategory"]] = relationship(back_populates="category")
+    subcategories: Mapped[list["Subcategory"]] = relationship(back_populates="category", passive_deletes=True)
     transactions: Mapped[list["Transaction"]] = relationship(back_populates="category")
 
 

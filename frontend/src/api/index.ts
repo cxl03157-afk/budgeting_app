@@ -9,6 +9,15 @@ export interface Category {
   is_default: number
 }
 
+export interface Subcategory {
+  id: number
+  name: string
+}
+
+export interface CategoryWithSubs extends Category {
+  subcategories: Subcategory[]
+}
+
 export interface Transaction {
   id: number
   type: TransactionType
@@ -43,6 +52,58 @@ async function request<T>(path: string): Promise<T> {
 
 export async function fetchCategories(): Promise<Category[]> {
   return request<Category[]>('/api/categories')
+}
+
+export async function fetchCategoriesWithSubs(): Promise<CategoryWithSubs[]> {
+  return request<CategoryWithSubs[]>('/api/categories?with_subcategories=true')
+}
+
+export async function createCategory(data: {
+  name: string
+  color: string
+  type: TransactionType
+}): Promise<Category> {
+  const res = await fetch('/api/categories', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail ?? `API error: ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function deleteCategory(id: number): Promise<void> {
+  const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail ?? `API error: ${res.status}`)
+  }
+}
+
+export async function createSubcategory(categoryId: number, name: string): Promise<Subcategory> {
+  const res = await fetch(`/api/categories/${categoryId}/subcategories`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail ?? `API error: ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function deleteSubcategory(categoryId: number, subId: number): Promise<void> {
+  const res = await fetch(`/api/categories/${categoryId}/subcategories/${subId}`, {
+    method: 'DELETE',
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail ?? `API error: ${res.status}`)
+  }
 }
 
 export async function fetchTransactions(params: FilterParams = {}): Promise<TransactionListResponse> {

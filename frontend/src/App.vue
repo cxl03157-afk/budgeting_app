@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import TransactionsView from './views/TransactionsView.vue'
 
 const drawer = ref(true)
+
+const navItems = [
+  { icon: 'mdi-format-list-bulleted', title: '収支一覧', to: '/transactions' },
+  { icon: 'mdi-tag-multiple', title: 'カテゴリ管理', to: '/categories' },
+  { icon: 'mdi-wallet', title: '予算管理', to: '/budget' },
+  { icon: 'mdi-chart-bar', title: 'レポート', to: '/report' },
+]
 </script>
 
 <template>
@@ -16,17 +22,18 @@ const drawer = ref(true)
       <v-divider />
       <v-list nav density="compact">
         <v-list-item
-          prepend-icon="mdi-format-list-bulleted"
-          title="収支一覧"
-          value="transactions"
-          active
+          v-for="item in navItems"
+          :key="item.to"
+          :prepend-icon="item.icon"
+          :title="item.title"
+          :to="item.to"
           color="primary"
         />
       </v-list>
     </v-navigation-drawer>
 
     <v-main>
-      <TransactionsView />
+      <RouterView />
     </v-main>
   </v-app>
 </template>

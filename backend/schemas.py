@@ -42,3 +42,24 @@ class TransactionListResponse(BaseModel):
     total_income: int    # フィルター後の収入合計
     total_expense: int   # フィルター後の支出合計
     balance: int         # フィルター後の残高（total_income - total_expense）
+
+
+class CategoryCreateSchema(BaseModel):
+    name: str = Field(min_length=1, max_length=20)
+    color: str = Field(pattern=r'^#[0-9a-fA-F]{6}$')
+    type: Literal["income", "expense"]
+
+
+class SubcategoryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+
+
+class CategoryWithSubsResponse(CategoryResponse):
+    subcategories: list[SubcategoryResponse] = []
+
+
+class SubcategoryCreateSchema(BaseModel):
+    name: str = Field(min_length=1, max_length=30)
