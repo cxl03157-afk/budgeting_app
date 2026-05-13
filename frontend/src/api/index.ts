@@ -159,3 +159,61 @@ export async function createTransaction(data: TransactionCreateInput): Promise<T
   }
   return res.json()
 }
+
+// --- 予算 ---
+
+export interface Budget {
+  id: number
+  year: number
+  month: number
+  amount: number
+}
+
+export interface MonthlyBudgetRow {
+  month: number
+  budget_id: number | null
+  amount: number | null
+  actual_expense: number
+}
+
+export async function fetchBudgets(year: number): Promise<MonthlyBudgetRow[]> {
+  return request<MonthlyBudgetRow[]>(`/api/budgets?year=${year}`)
+}
+
+export async function createBudget(data: {
+  year: number
+  month: number
+  amount: number
+}): Promise<Budget> {
+  const res = await fetch('/api/budgets', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail ?? `API error: ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function updateBudget(id: number, amount: number): Promise<Budget> {
+  const res = await fetch(`/api/budgets/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amount }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail ?? `API error: ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function deleteBudget(id: number): Promise<void> {
+  const res = await fetch(`/api/budgets/${id}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail ?? `API error: ${res.status}`)
+  }
+}
