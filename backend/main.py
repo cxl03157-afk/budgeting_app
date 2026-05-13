@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from routers import categories, transactions
 
 app = FastAPI(title="Budgeting App API", version="0.1.0")
 
@@ -9,6 +10,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(categories.router)
+app.include_router(transactions.router)
 
 
 @app.get("/health")

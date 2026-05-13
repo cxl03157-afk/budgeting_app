@@ -77,10 +77,3 @@ INSERT INTO categories (name, color, type, is_default) VALUES
   ('税・その他',     '#78716c', 'expense', 1),
   ('収入',           '#10b981', 'income',  1);
 
--- サンプルデータ: transactions（月間集計クエリ確認用）
--- category_id: 15=収入, 1=食費, 4=交通費, 3=娯楽費
-INSERT INTO transactions (type, amount, date, category_id, memo) VALUES
-  ('income',  300000, '2026-05-01', 15, '給与'),
-  ('expense',  45000, '2026-05-03',  1, 'スーパー'),
-  ('expense',  12000, '2026-05-10',  4, '交通費'),
-  ('expense',   8000, '2026-05-15',  3, '映画・外食');
