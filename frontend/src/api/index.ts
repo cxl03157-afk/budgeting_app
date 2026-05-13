@@ -64,6 +64,15 @@ export interface TransactionCreateInput {
   recurring: RecurringType
 }
 
+export async function deleteTransaction(id: number): Promise<void> {
+  // 204 No Content のためレスポンスボディは読まない
+  const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail ?? `API error: ${res.status}`)
+  }
+}
+
 export async function updateTransaction(id: number, data: TransactionCreateInput): Promise<Transaction> {
   const res = await fetch(`/api/transactions/${id}`, {
     method: 'PUT',

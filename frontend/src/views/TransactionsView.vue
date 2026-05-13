@@ -5,6 +5,7 @@ import {
   fetchTransactions,
   createTransaction,
   updateTransaction,
+  deleteTransaction,
   type Category,
   type Transaction,
   type TransactionListResponse,
@@ -146,6 +147,29 @@ function openDialog(tx?: Transaction) {
 function closeDialog() {
   showDialog.value = false
   editingId.value = null
+  formError.value = null
+  form.value = initialForm()
+}
+
+// --- 削除 ---
+const showDeleteConfirm = ref(false)
+
+async function confirmDelete() {
+  if (editingId.value === null) return
+  saving.value = true
+  try {
+    await deleteTransaction(editingId.value)
+    showDeleteConfirm.value = false
+    closeDialog()
+    await loadTransactions()
+    snackbarMessage.value = '削除しました'
+    snackbar.value = true
+  } catch (e) {
+    formError.value = e instanceof Error ? e.message : '削除に失敗しました'
+    showDeleteConfirm.value = false
+  } finally {
+    saving.value = false
+  }
 }
 
 async function submitForm() {
@@ -434,9 +458,34 @@ const snackbarMessage = ref('')
           </v-alert>
         </v-card-text>
         <v-card-actions class="px-6 pb-4">
+          <v-btn
+            v-if="isEditMode"
+            color="error"
+            variant="text"
+            :loading="saving"
+            :disabled="saving"
+            @click="showDeleteConfirm = true"
+          >
+            削除
+          </v-btn>
           <v-spacer />
           <v-btn variant="text" @click="closeDialog" :disabled="saving">キャンセル</v-btn>
           <v-btn color="primary" variant="flat" @click="submitForm" :loading="saving">保存</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- 削除確認ダイアログ -->
+    <v-dialog v-model="showDeleteConfirm" max-width="360">
+      <v-card>
+        <v-card-title class="pt-4 px-6">削除の確認</v-card-title>
+        <v-card-text class="px-6">
+          この収支を削除してもよろしいですか？<br>この操作は元に戻せません。
+        </v-card-text>
+        <v-card-actions class="px-6 pb-4">
+          <v-spacer />
+          <v-btn variant="text" :disabled="saving" @click="showDeleteConfirm = false">キャンセル</v-btn>
+          <v-btn color="error" variant="flat" :loading="saving" :disabled="saving" @click="confirmDelete">削除</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

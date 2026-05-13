@@ -99,3 +99,18 @@ def update_transaction(transaction_id: int, body: TransactionCreateSchema, db: S
         db.rollback()
         raise HTTPException(status_code=500, detail="database error")
     return tx
+
+
+@router.delete("/{transaction_id}", status_code=204)
+def delete_transaction(transaction_id: int, db: Session = Depends(get_db)):
+    # ハード削除: original_id FK は ON DELETE SET NULL のため参照整合性を保つ
+    tx = db.get(Transaction, transaction_id)
+    if tx is None:
+        raise HTTPException(status_code=404, detail="transaction not found")
+    try:
+        db.delete(tx)
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="database error")
+    # 204 No Content: レスポンスボディなし
