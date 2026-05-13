@@ -1,5 +1,6 @@
 from datetime import date, datetime
-from pydantic import BaseModel, ConfigDict
+from typing import Literal
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CategoryResponse(BaseModel):
@@ -24,6 +25,16 @@ class TransactionResponse(BaseModel):
     memo: str | None
     recurring: str
     auto_generated: int
+
+
+class TransactionCreateSchema(BaseModel):
+    type: Literal["income", "expense"]
+    amount: int = Field(gt=0)
+    date: date
+    category_id: int = Field(gt=0)
+    subcategory_id: int | None = None
+    memo: str | None = Field(None, max_length=100)
+    recurring: Literal["none", "weekly", "monthly"] = "none"
 
 
 class TransactionListResponse(BaseModel):
