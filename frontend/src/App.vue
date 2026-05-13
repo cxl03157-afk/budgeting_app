@@ -7,7 +7,7 @@ const navItems = [
   { icon: 'mdi-format-list-bulleted', title: '収支一覧', to: '/transactions' },
   { icon: 'mdi-tag-multiple', title: 'カテゴリ管理', to: '/categories' },
   { icon: 'mdi-wallet', title: '予算管理', to: '/budget' },
-  { icon: 'mdi-chart-bar', title: 'レポート', to: '/report' },
+  { icon: 'mdi-view-dashboard', title: 'ダッシュボード', to: '/dashboard' },
 ]
 </script>
 

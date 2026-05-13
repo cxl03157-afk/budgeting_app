@@ -2,14 +2,14 @@ import { createRouter, createWebHistory } from 'vue-router'
 import TransactionsView from '../views/TransactionsView.vue'
 import CategoriesView from '../views/CategoriesView.vue'
 import BudgetView from '../views/BudgetView.vue'
-import PlaceholderView from '../views/PlaceholderView.vue'
+import DashboardView from '../views/DashboardView.vue'
 
 const routes = [
   { path: '/', redirect: '/transactions' },
   { path: '/transactions', component: TransactionsView },
   { path: '/categories', component: CategoriesView },
   { path: '/budget', component: BudgetView },
-  { path: '/report', component: PlaceholderView },
+  { path: '/dashboard', component: DashboardView },
 ]
 
 export default createRouter({
