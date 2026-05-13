@@ -64,6 +64,19 @@ export interface TransactionCreateInput {
   recurring: RecurringType
 }
 
+export async function updateTransaction(id: number, data: TransactionCreateInput): Promise<Transaction> {
+  const res = await fetch(`/api/transactions/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail ?? `API error: ${res.status}`)
+  }
+  return res.json()
+}
+
 export async function createTransaction(data: TransactionCreateInput): Promise<Transaction> {
   const res = await fetch('/api/transactions', {
     method: 'POST',

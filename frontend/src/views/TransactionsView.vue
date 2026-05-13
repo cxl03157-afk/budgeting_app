@@ -4,6 +4,7 @@ import {
   fetchCategories,
   fetchTransactions,
   createTransaction,
+  updateTransaction,
   type Category,
   type Transaction,
   type TransactionListResponse,
@@ -85,21 +86,25 @@ const tableHeaders = [
   { title: 'カテゴリ', key: 'category_id', sortable: false },
   { title: 'メモ', key: 'memo', sortable: false },
   { title: '金額', key: 'amount', sortable: true, align: 'end' as const },
+  { title: '操作', key: 'actions', sortable: false, align: 'center' as const },
 ]
 const tableItems = computed(() =>
   [...result.value.items].sort((a, b) => b.date.localeCompare(a.date))
 )
 
-// --- 登録モーダル ---
+// --- 登録 / 編集モーダル ---
 const showDialog = ref(false)
 const saving = ref(false)
 const formError = ref<string | null>(null)
+const editingId = ref<number | null>(null)
+const isEditMode = computed(() => editingId.value !== null)
 
 const initialForm = () => ({
   type: 'expense' as TransactionType,
   amount: '' as string | number,
   date: today(),
   category_id: null as number | null,
+  subcategory_id: null as number | null,
   memo: '',
   recurring: 'none' as RecurringType,
 })
@@ -111,20 +116,36 @@ const recurringOptions = [
   { title: '毎月', value: 'monthly' },
 ]
 
-// type 変更時に category_id をリセット
-watch(() => form.value.type, () => { form.value.category_id = null })
+function onTypeToggle() {
+  form.value.category_id = null
+}
 
-// モーダルのカテゴリ選択肢を type でフィルタリング
 const formCategoryOptions = computed(() =>
   categories.value
     .filter((c) => c.type === form.value.type)
     .map((c) => ({ title: c.name, value: c.id }))
 )
 
-function openDialog() {
-  form.value = initialForm()
+function openDialog(tx?: Transaction) {
+  editingId.value = tx?.id ?? null
+  form.value = tx
+    ? {
+        type: tx.type,
+        amount: tx.amount,
+        date: tx.date,
+        category_id: tx.category_id,
+        subcategory_id: tx.subcategory_id,
+        memo: tx.memo ?? '',
+        recurring: tx.recurring,
+      }
+    : initialForm()
   formError.value = null
   showDialog.value = true
+}
+
+function closeDialog() {
+  showDialog.value = false
+  editingId.value = null
 }
 
 async function submitForm() {
@@ -140,20 +161,28 @@ async function submitForm() {
 
   saving.value = true
   formError.value = null
+  const payload = {
+    type: form.value.type,
+    amount,
+    date: form.value.date,
+    category_id: Number(form.value.category_id),
+    memo: form.value.memo || undefined,
+    recurring: form.value.recurring,
+  }
   try {
-    await createTransaction({
-      type: form.value.type,
-      amount,
-      date: form.value.date,
-      category_id: Number(form.value.category_id),
-      memo: form.value.memo || undefined,
-      recurring: form.value.recurring,
-    })
-    showDialog.value = false
+    if (isEditMode.value) {
+      if (editingId.value === null) return
+      await updateTransaction(editingId.value, payload)
+      snackbarMessage.value = '更新しました'
+    } else {
+      await createTransaction(payload)
+      snackbarMessage.value = '登録しました'
+    }
+    closeDialog()
     await loadTransactions()
     snackbar.value = true
   } catch (e) {
-    formError.value = e instanceof Error ? e.message : '登録に失敗しました'
+    formError.value = e instanceof Error ? e.message : '保存に失敗しました'
   } finally {
     saving.value = false
   }
@@ -161,6 +190,7 @@ async function submitForm() {
 
 // --- 成功通知 ---
 const snackbar = ref(false)
+const snackbarMessage = ref('')
 </script>
 
 <template>
@@ -168,7 +198,7 @@ const snackbar = ref(false)
     <!-- ヘッダー -->
     <div class="d-flex align-center justify-space-between mb-4">
       <h2 class="text-h5">収支一覧</h2>
-      <v-btn color="primary" prepend-icon="mdi-plus" @click="openDialog">
+      <v-btn color="primary" prepend-icon="mdi-plus" @click="openDialog()">
         新規登録
       </v-btn>
     </div>
@@ -316,17 +346,28 @@ const snackbar = ref(false)
           {{ formatAmount((item as Transaction).amount) }}
         </span>
       </template>
+
+      <template #item.actions="{ item }">
+        <v-btn
+          icon="mdi-pencil"
+          size="small"
+          variant="text"
+          @click="openDialog(item as Transaction)"
+        />
+      </template>
     </v-data-table>
 
-    <!-- 登録モーダル -->
+    <!-- 登録 / 編集モーダル -->
     <v-dialog v-model="showDialog" max-width="480" persistent>
       <v-card>
-        <v-card-title class="pt-4 px-6">収支を登録</v-card-title>
+        <v-card-title class="pt-4 px-6">
+          {{ isEditMode ? '収支を編集' : '収支を登録' }}
+        </v-card-title>
         <v-card-text class="px-6">
           <!-- 区分トグル -->
           <div class="mb-4">
             <div class="text-caption mb-1">区分</div>
-            <v-btn-toggle v-model="form.type" mandatory density="compact" color="primary">
+            <v-btn-toggle v-model="form.type" mandatory density="compact" color="primary" @update:model-value="onTypeToggle">
               <v-btn value="expense">支出</v-btn>
               <v-btn value="income">収入</v-btn>
             </v-btn-toggle>
@@ -394,7 +435,7 @@ const snackbar = ref(false)
         </v-card-text>
         <v-card-actions class="px-6 pb-4">
           <v-spacer />
-          <v-btn variant="text" @click="showDialog = false" :disabled="saving">キャンセル</v-btn>
+          <v-btn variant="text" @click="closeDialog" :disabled="saving">キャンセル</v-btn>
           <v-btn color="primary" variant="flat" @click="submitForm" :loading="saving">保存</v-btn>
         </v-card-actions>
       </v-card>
@@ -402,7 +443,7 @@ const snackbar = ref(false)
 
     <!-- 成功スナックバー -->
     <v-snackbar v-model="snackbar" color="success" timeout="3000">
-      登録しました
+      {{ snackbarMessage }}
     </v-snackbar>
   </v-container>
 </template>
