@@ -54,3 +54,25 @@ export async function fetchTransactions(params: FilterParams = {}): Promise<Tran
   const qs = query.toString()
   return request<TransactionListResponse>(`/api/transactions${qs ? `?${qs}` : ''}`)
 }
+
+export interface TransactionCreateInput {
+  type: TransactionType
+  amount: number
+  date: string
+  category_id: number
+  memo?: string
+  recurring: RecurringType
+}
+
+export async function createTransaction(data: TransactionCreateInput): Promise<Transaction> {
+  const res = await fetch('/api/transactions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail ?? `API error: ${res.status}`)
+  }
+  return res.json()
+}

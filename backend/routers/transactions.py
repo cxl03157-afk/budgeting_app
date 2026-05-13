@@ -1,11 +1,11 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Literal
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
 from database import get_db
-from models import Transaction
-from schemas import TransactionListResponse, TransactionResponse
+from models import Category, Transaction
+from schemas import TransactionCreateSchema, TransactionListResponse, TransactionResponse
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
@@ -51,3 +51,23 @@ def list_transactions(
         total_expense=total_expense,
         balance=total_income - total_expense,
     )
+
+
+@router.post("", response_model=TransactionResponse, status_code=201)
+def create_transaction(body: TransactionCreateSchema, db: Session = Depends(get_db)):
+    category = db.get(Category, body.category_id)
+    if category is None:
+        raise HTTPException(status_code=404, detail="category not found")
+    if category.type != body.type:
+        raise HTTPException(status_code=422, detail="category type does not match transaction type")
+
+    now = datetime.now()
+    tx = Transaction(**body.model_dump(), auto_generated=False, created_at=now, updated_at=now)
+    try:
+        db.add(tx)
+        db.commit()
+        db.refresh(tx)
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="database error")
+    return tx
