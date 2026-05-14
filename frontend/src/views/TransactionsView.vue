@@ -106,6 +106,7 @@ watch(filterPeriodMode, (newMode) => {
     filterMonth.value = null
     filterWeek.value = null
   } else if (newMode === 'weekly') {
+    if (filterYear.value == null) filterYear.value = todayYear
     if (filterMonth.value == null) filterMonth.value = todayMonth
     filterWeek.value = null
   } else {
@@ -128,6 +129,14 @@ function formatDate(d: string) {
 }
 function formatAmount(amount: number) {
   return `¥${amount.toLocaleString()}`
+}
+function formatAmountSigned(amount: number, type: string) {
+  return type === 'income' ? `+¥${amount.toLocaleString()}` : `−¥${amount.toLocaleString()}`
+}
+
+function openDelete(tx: Transaction) {
+  editingId.value = tx.id
+  showDeleteConfirm.value = true
 }
 function today() {
   return new Date().toISOString().slice(0, 10)
@@ -311,141 +320,97 @@ const snackbarMessage = ref('')
       </v-btn>
     </div>
 
-    <!-- フィルターバー 1段目: 期間系 -->
-    <v-row dense class="mb-2">
-      <v-col cols="12" sm="2">
-        <v-select
-          v-model="filterType"
-          :items="typeOptions"
-          item-title="title"
-          item-value="value"
-          label="区分"
-          density="compact"
-          hide-details
-          clearable
-        />
-      </v-col>
-      <v-col cols="12" sm="2">
-        <v-select
-          v-model="filterPeriodMode"
-          :items="periodModeOptions"
-          item-title="title"
-          item-value="value"
-          label="集計期間"
-          density="compact"
-          hide-details
-        />
-      </v-col>
-      <v-col cols="12" sm="2">
-        <v-select
-          v-model="filterYear"
-          :items="yearOptions"
-          item-title="title"
-          item-value="value"
-          label="年"
-          density="compact"
-          hide-details
-          clearable
-        />
-      </v-col>
-      <v-col v-if="filterPeriodMode !== 'yearly'" cols="12" sm="2">
-        <v-select
-          v-model="filterMonth"
-          :items="monthOptions"
-          item-title="title"
-          item-value="value"
-          label="月"
-          density="compact"
-          hide-details
-          clearable
-        />
-      </v-col>
-      <v-col v-if="filterPeriodMode === 'weekly'" cols="12" sm="2">
-        <v-select
-          v-model="filterWeek"
-          :items="weekOptions"
-          item-title="title"
-          item-value="value"
-          label="週"
-          density="compact"
-          hide-details
-          clearable
-        />
-      </v-col>
-    </v-row>
-
-    <!-- フィルターバー 2段目: カテゴリ系 + リセット -->
-    <v-row dense class="mb-4">
-      <v-col cols="12" sm="3">
-        <v-select
-          v-model="filterCategoryId"
-          :items="categoryOptions"
-          item-title="title"
-          item-value="value"
-          label="カテゴリ"
-          density="compact"
-          hide-details
-          clearable
-        />
-      </v-col>
-      <v-col v-if="filterSubcategoryOptions.length > 0" cols="12" sm="3">
-        <v-select
-          v-model="filterSubcategoryId"
-          :items="[{ title: 'すべて', value: null }, ...filterSubcategoryOptions]"
-          item-title="title"
-          item-value="value"
-          label="サブカテゴリ"
-          density="compact"
-          hide-details
-          clearable
-        />
-      </v-col>
-      <v-col cols="12" sm="2" class="d-flex align-center">
-        <v-btn variant="outlined" density="compact" @click="resetFilters">リセット</v-btn>
-      </v-col>
-    </v-row>
+    <!-- フィルターバー（1行） -->
+    <div class="d-flex flex-wrap align-center ga-2 mb-4">
+      <v-select
+        v-model="filterType"
+        :items="typeOptions"
+        item-title="title"
+        item-value="value"
+        label="区分"
+        density="compact"
+        hide-details
+        style="max-width: 140px"
+      />
+      <v-select
+        v-model="filterCategoryId"
+        :items="categoryOptions"
+        item-title="title"
+        item-value="value"
+        label="カテゴリ"
+        density="compact"
+        hide-details
+        style="max-width: 180px"
+      />
+      <v-select
+        v-if="filterSubcategoryOptions.length > 0"
+        v-model="filterSubcategoryId"
+        :items="[{ title: 'すべて', value: null }, ...filterSubcategoryOptions]"
+        item-title="title"
+        item-value="value"
+        label="サブカテゴリ"
+        density="compact"
+        hide-details
+        style="max-width: 180px"
+      />
+      <v-select
+        v-model="filterPeriodMode"
+        :items="periodModeOptions"
+        item-title="title"
+        item-value="value"
+        label="集計期間"
+        density="compact"
+        hide-details
+        style="max-width: 130px"
+      />
+      <v-select
+        v-model="filterYear"
+        :items="yearOptions"
+        item-title="title"
+        item-value="value"
+        label="年"
+        density="compact"
+        hide-details
+        style="max-width: 120px"
+      />
+      <v-select
+        v-if="filterPeriodMode !== 'yearly'"
+        v-model="filterMonth"
+        :items="monthOptions"
+        item-title="title"
+        item-value="value"
+        label="月"
+        density="compact"
+        hide-details
+        style="max-width: 140px"
+      />
+      <v-select
+        v-if="filterPeriodMode === 'weekly'"
+        v-model="filterWeek"
+        :items="weekOptions"
+        item-title="title"
+        item-value="value"
+        label="週"
+        density="compact"
+        hide-details
+        style="max-width: 180px"
+      />
+      <v-btn variant="text" density="compact" color="primary" @click="resetFilters">リセット</v-btn>
+    </div>
 
     <!-- エラー表示 -->
     <v-alert v-if="errorMessage" type="error" class="mb-4" density="compact">
       {{ errorMessage }}
     </v-alert>
 
-    <!-- サマリーカード -->
-    <v-row dense class="mb-4">
-      <v-col cols="12" sm="4">
-        <v-card variant="tonal" color="green">
-          <v-card-text class="text-center">
-            <div class="text-caption">収入合計</div>
-            <div class="text-h6 font-weight-bold text-green">
-              {{ formatAmount(result.total_income) }}
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col cols="12" sm="4">
-        <v-card variant="tonal" color="red">
-          <v-card-text class="text-center">
-            <div class="text-caption">支出合計</div>
-            <div class="text-h6 font-weight-bold text-red">
-              {{ formatAmount(result.total_expense) }}
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col cols="12" sm="4">
-        <v-card variant="tonal" :color="result.balance >= 0 ? 'blue' : 'orange'">
-          <v-card-text class="text-center">
-            <div class="text-caption">残高</div>
-            <div
-              class="text-h6 font-weight-bold"
-              :class="result.balance >= 0 ? 'text-blue' : 'text-orange'"
-            >
-              {{ formatAmount(result.balance) }}
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+    <!-- サマリーテキスト -->
+    <div class="d-flex ga-4 mb-4 text-body-2">
+      <span class="text-green font-weight-medium">収入: {{ formatAmount(result.total_income) }}</span>
+      <span class="text-red font-weight-medium">支出: {{ formatAmount(result.total_expense) }}</span>
+      <span :class="result.balance >= 0 ? 'text-blue' : 'text-orange'" class="font-weight-medium">
+        残高: {{ formatAmount(result.balance) }}
+      </span>
+    </div>
 
     <!-- 収支テーブル -->
     <v-data-table
@@ -497,17 +462,13 @@ const snackbarMessage = ref('')
           class="font-weight-medium"
           :class="(item as Transaction).type === 'income' ? 'text-green' : 'text-red'"
         >
-          {{ formatAmount((item as Transaction).amount) }}
+          {{ formatAmountSigned((item as Transaction).amount, (item as Transaction).type) }}
         </span>
       </template>
 
       <template #item.actions="{ item }">
-        <v-btn
-          icon="mdi-pencil"
-          size="small"
-          variant="text"
-          @click="openDialog(item as Transaction)"
-        />
+        <v-btn icon="mdi-pencil" size="small" variant="text" @click="openDialog(item as Transaction)" />
+        <v-btn icon="mdi-delete" size="small" variant="text" color="error" @click="openDelete(item as Transaction)" />
       </template>
     </v-data-table>
 
@@ -582,17 +543,6 @@ const snackbarMessage = ref('')
             maxlength="100"
             density="compact"
             class="mb-3"
-            hide-details="auto"
-          />
-
-          <!-- 繰り返し -->
-          <v-select
-            v-model="form.recurring"
-            :items="recurringOptions"
-            item-title="title"
-            item-value="value"
-            label="繰り返し"
-            density="compact"
             hide-details="auto"
           />
 

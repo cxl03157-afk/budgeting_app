@@ -5,11 +5,11 @@ import { useTheme } from 'vuetify'
 const drawer = ref(true)
 
 const navItems = [
-  { icon: 'mdi-format-list-bulleted', title: '収支一覧', to: '/transactions' },
-  { icon: 'mdi-tag-multiple', title: 'カテゴリ管理', to: '/categories' },
-  { icon: 'mdi-wallet', title: '予算管理', to: '/budget' },
-  { icon: 'mdi-view-dashboard', title: 'ダッシュボード', to: '/dashboard' },
-  { icon: 'mdi-chart-pie', title: 'グラフ・レポート', to: '/report' },
+  { emoji: '🏠', title: 'ダッシュボード', to: '/dashboard' },
+  { emoji: '📋', title: '収支一覧', to: '/transactions' },
+  { emoji: '🏷️', title: 'カテゴリ', to: '/categories' },
+  { emoji: '🎯', title: '予算設定', to: '/budget' },
+  { emoji: '📊', title: 'グラフ', to: '/report' },
 ]
 
 const theme = useTheme()
@@ -36,11 +36,14 @@ watch(isDark, (val) => {
         <v-list-item
           v-for="item in navItems"
           :key="item.to"
-          :prepend-icon="item.icon"
-          :title="item.title"
           :to="item.to"
           color="primary"
-        />
+        >
+          <template #prepend>
+            <span style="font-size: 1.15rem; line-height: 1; margin-right: 10px">{{ item.emoji }}</span>
+          </template>
+          <v-list-item-title>{{ item.title }}</v-list-item-title>
+        </v-list-item>
       </v-list>
       <v-divider class="my-2" />
       <v-list nav density="compact">

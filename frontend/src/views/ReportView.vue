@@ -276,48 +276,53 @@ function exportCsv() {
 
 <template>
   <v-container fluid class="pa-4">
-    <!-- タイトル + CSVエクスポート -->
-    <div class="d-flex align-center justify-space-between mb-4">
+    <!-- タイトル + コントロールバー -->
+    <div class="d-flex align-start justify-space-between flex-wrap ga-2 mb-4">
       <h2 class="text-h5">グラフ・レポート</h2>
-      <v-btn
-        prepend-icon="mdi-download"
-        variant="tonal"
-        density="compact"
-        :disabled="totalAmount === 0"
-        @click="exportCsv"
-      >
-        CSVエクスポート
-      </v-btn>
-    </div>
-
-    <!-- コントロールバー -->
-    <div class="d-flex flex-wrap align-center ga-2 mb-4">
-      <v-btn-toggle v-model="periodMode" mandatory density="compact" color="primary">
-        <v-btn value="month">月別</v-btn>
-        <v-btn value="year">年別</v-btn>
-      </v-btn-toggle>
-
-      <v-btn-toggle v-model="displayType" mandatory density="compact" color="secondary">
-        <v-btn value="expense">支出</v-btn>
-        <v-btn value="income">収入</v-btn>
-      </v-btn-toggle>
-
-      <v-select
-        v-model="selectedYear"
-        :items="yearOptions"
-        density="compact"
-        hide-details
-        style="max-width: 110px"
-      />
-
-      <v-select
-        v-if="periodMode === 'month'"
-        v-model="selectedMonth"
-        :items="monthOptions"
-        density="compact"
-        hide-details
-        style="max-width: 100px"
-      />
+      <div class="d-flex flex-wrap align-center ga-2">
+        <v-select
+          v-model="periodMode"
+          :items="[{ title: '月別', value: 'month' }, { title: '年別', value: 'year' }]"
+          item-title="title"
+          item-value="value"
+          density="compact"
+          hide-details
+          style="max-width: 100px"
+        />
+        <v-select
+          v-model="displayType"
+          :items="[{ title: '支出のみ', value: 'expense' }, { title: '収入のみ', value: 'income' }]"
+          item-title="title"
+          item-value="value"
+          density="compact"
+          hide-details
+          style="max-width: 150px"
+        />
+        <v-select
+          v-model="selectedYear"
+          :items="yearOptions"
+          density="compact"
+          hide-details
+          style="max-width: 110px"
+        />
+        <v-select
+          v-if="periodMode === 'month'"
+          v-model="selectedMonth"
+          :items="monthOptions"
+          density="compact"
+          hide-details
+          style="max-width: 100px"
+        />
+        <v-btn
+          prepend-icon="mdi-download"
+          variant="tonal"
+          density="compact"
+          :disabled="totalAmount === 0"
+          @click="exportCsv"
+        >
+          CSVエクスポート
+        </v-btn>
+      </div>
     </div>
 
     <!-- ローディング -->
