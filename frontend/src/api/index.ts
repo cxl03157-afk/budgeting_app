@@ -121,6 +121,7 @@ export interface TransactionCreateInput {
   amount: number
   date: string
   category_id: number
+  subcategory_id?: number | null
   memo?: string
   recurring: RecurringType
 }

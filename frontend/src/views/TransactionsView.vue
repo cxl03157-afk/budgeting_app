@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import {
-  fetchCategories,
+  fetchCategoriesWithSubs,
   fetchTransactions,
   createTransaction,
   updateTransaction,
   deleteTransaction,
-  type Category,
+  type CategoryWithSubs,
   type Transaction,
   type TransactionListResponse,
   type TransactionType,
@@ -15,7 +15,7 @@ import {
 } from '../api/index'
 
 // --- 一覧表示 ---
-const categories = ref<Category[]>([])
+const categories = ref<CategoryWithSubs[]>([])
 const result = ref<TransactionListResponse>({ items: [], total_income: 0, total_expense: 0, balance: 0 })
 const loading = ref(false)
 const errorMessage = ref<string | null>(null)
@@ -67,7 +67,7 @@ async function loadTransactions() {
 watch([filterType, filterCategoryId, filterYear, filterMonth], () => loadTransactions())
 
 onMounted(async () => {
-  categories.value = await fetchCategories()
+  categories.value = await fetchCategoriesWithSubs()
   await loadTransactions()
 })
 
@@ -85,6 +85,7 @@ const tableHeaders = [
   { title: '日付', key: 'date', sortable: true },
   { title: '区分', key: 'type', sortable: false },
   { title: 'カテゴリ', key: 'category_id', sortable: false },
+  { title: 'サブカテゴリ', key: 'subcategory_id', sortable: false },
   { title: 'メモ', key: 'memo', sortable: false },
   { title: '金額', key: 'amount', sortable: true, align: 'end' as const },
   { title: '操作', key: 'actions', sortable: false, align: 'center' as const },
@@ -117,8 +118,22 @@ const recurringOptions = [
   { title: '毎月', value: 'monthly' },
 ]
 
+function getSubcategoryName(subcategoryId: number | null): string {
+  if (subcategoryId == null) return '—'
+  for (const cat of categories.value) {
+    const sub = cat.subcategories.find(s => s.id === subcategoryId)
+    if (sub) return sub.name
+  }
+  return '不明なサブカテゴリ'
+}
+
 function onTypeToggle() {
   form.value.category_id = null
+  form.value.subcategory_id = null
+}
+
+function onCategoryChange() {
+  form.value.subcategory_id = null
 }
 
 const formCategoryOptions = computed(() =>
@@ -126,6 +141,12 @@ const formCategoryOptions = computed(() =>
     .filter((c) => c.type === form.value.type)
     .map((c) => ({ title: c.name, value: c.id }))
 )
+
+const formSubcategoryOptions = computed(() => {
+  if (form.value.category_id == null) return []
+  const cat = categories.value.find(c => c.id === form.value.category_id)
+  return cat?.subcategories.map(s => ({ title: s.name, value: s.id })) ?? []
+})
 
 function openDialog(tx?: Transaction) {
   editingId.value = tx?.id ?? null
@@ -190,6 +211,7 @@ async function submitForm() {
     amount,
     date: form.value.date,
     category_id: Number(form.value.category_id),
+    subcategory_id: form.value.subcategory_id ?? null,
     memo: form.value.memo || undefined,
     recurring: form.value.recurring,
   }
@@ -358,6 +380,10 @@ const snackbarMessage = ref('')
         </span>
       </template>
 
+      <template #item.subcategory_id="{ item }">
+        {{ getSubcategoryName((item as Transaction).subcategory_id) }}
+      </template>
+
       <template #item.memo="{ item }">
         {{ (item as Transaction).memo ?? '—' }}
       </template>
@@ -426,6 +452,20 @@ const snackbarMessage = ref('')
             item-title="title"
             item-value="value"
             label="カテゴリ"
+            density="compact"
+            class="mb-3"
+            hide-details="auto"
+            @update:model-value="onCategoryChange"
+          />
+
+          <!-- サブカテゴリ -->
+          <v-select
+            v-if="formSubcategoryOptions.length > 0"
+            v-model="form.subcategory_id"
+            :items="[{ title: 'なし', value: null }, ...formSubcategoryOptions]"
+            item-title="title"
+            item-value="value"
+            label="サブカテゴリ（任意）"
             density="compact"
             class="mb-3"
             hide-details="auto"
