@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import {
   fetchBudgets,
   createBudget,
   updateBudget,
   deleteBudget,
+  fetchTransactions,
   type MonthlyBudgetRow,
 } from '../api/index'
 
 const selectedYear = ref(new Date().getFullYear())
 const rows = ref<MonthlyBudgetRow[]>([])
+const annualIncome = ref(0)
 const loading = ref(false)
 const errorMessage = ref<string | null>(null)
 
@@ -17,7 +19,12 @@ async function loadBudgets() {
   loading.value = true
   errorMessage.value = null
   try {
-    rows.value = await fetchBudgets(selectedYear.value)
+    const [budgetRes, txRes] = await Promise.all([
+      fetchBudgets(selectedYear.value),
+      fetchTransactions({ year: selectedYear.value, type: 'income' }),
+    ])
+    rows.value = budgetRes
+    annualIncome.value = txRes.total_income
   } catch (e) {
     errorMessage.value = e instanceof Error ? e.message : '取得に失敗しました'
   } finally {
@@ -25,11 +32,18 @@ async function loadBudgets() {
   }
 }
 
+const totalBudget = computed(() =>
+  rows.value.reduce((sum, r) => sum + (r.amount ?? 0), 0)
+)
+const savings = computed(() => annualIncome.value - totalBudget.value)
+
 onMounted(loadBudgets)
 watch(selectedYear, loadBudgets)
 
 function formatAmount(amount: number) {
-  return `¥${amount.toLocaleString()}`
+  return amount < 0
+    ? `−¥${Math.abs(amount).toLocaleString()}`
+    : `¥${amount.toLocaleString()}`
 }
 
 function calcRate(amount: number, actual: number): number {
@@ -237,6 +251,34 @@ function showSnackbar(msg: string) {
         </tr>
       </tbody>
     </v-table>
+
+    <!-- 貯金見込みサマリー -->
+    <v-card variant="tonal" :color="savings >= 0 ? 'green' : 'orange'" class="mt-4 pa-3">
+      <div class="d-flex justify-space-between align-center flex-wrap ga-2">
+        <div>
+          <div class="text-caption">年間収入合計</div>
+          <div class="text-body-2 font-weight-medium">{{ formatAmount(annualIncome) }}</div>
+        </div>
+        <div class="text-body-2 text-medium-emphasis px-2">−</div>
+        <div>
+          <div class="text-caption">
+            予算合計
+            <span class="text-caption text-medium-emphasis">（未設定月は0円）</span>
+          </div>
+          <div class="text-body-2 font-weight-medium">{{ formatAmount(totalBudget) }}</div>
+        </div>
+        <div class="text-body-2 text-medium-emphasis px-2">=</div>
+        <div class="text-right">
+          <div class="text-caption">予算達成時の貯金見込み</div>
+          <div
+            class="text-h6 font-weight-bold"
+            :class="savings >= 0 ? 'text-green' : 'text-orange'"
+          >
+            {{ formatAmount(savings) }}
+          </div>
+        </div>
+      </div>
+    </v-card>
 
     <!-- 設定・編集ダイアログ -->
     <v-dialog v-model="showDialog" max-width="360" persistent>

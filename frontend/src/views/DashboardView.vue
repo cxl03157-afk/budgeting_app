@@ -9,11 +9,13 @@ import {
   type MonthlyBudgetRow,
 } from '../api/index'
 
-type PeriodMode = 'currentMonth' | 'currentYear' | 'month' | 'year'
+type PeriodMode = 'currentMonth' | 'currentWeek' | 'currentYear' | 'month' | 'year'
 
 const now = new Date()
 const todayYear = now.getFullYear()
 const todayMonth = now.getMonth() + 1
+// 簡易週：1〜7日=第1週、8〜14日=第2週、15〜21日=第3週、22〜28日=第4週、29日〜月末=第5週
+const todayWeek = Math.min(Math.ceil(now.getDate() / 7), 5)
 
 const periodMode = ref<PeriodMode>('currentMonth')
 const selectedYear = ref(todayYear)
@@ -27,7 +29,10 @@ const errorMessage = ref<string | null>(null)
 const categoryTab = ref<'expense' | 'income'>('expense')
 
 const isMonthMode = computed(
-  () => periodMode.value === 'currentMonth' || periodMode.value === 'month'
+  () =>
+    periodMode.value === 'currentMonth' ||
+    periodMode.value === 'currentWeek' ||
+    periodMode.value === 'month'
 )
 
 const apiYear = computed(() =>
@@ -37,17 +42,22 @@ const apiYear = computed(() =>
 )
 
 const apiMonth = computed<number | undefined>(() => {
-  if (periodMode.value === 'currentMonth') return todayMonth
+  if (periodMode.value === 'currentMonth' || periodMode.value === 'currentWeek') return todayMonth
   if (periodMode.value === 'month') return selectedMonth.value
   return undefined
 })
+
+const apiWeek = computed<number | undefined>(() =>
+  periodMode.value === 'currentWeek' ? todayWeek : undefined
+)
 
 async function loadData() {
   loading.value = true
   errorMessage.value = null
   try {
-    const params: { year: number; month?: number } = { year: apiYear.value }
+    const params: { year: number; month?: number; week?: number } = { year: apiYear.value }
     if (apiMonth.value != null) params.month = apiMonth.value
+    if (apiWeek.value != null) params.week = apiWeek.value
 
     // NOTE: カテゴリ集計は現在フロントエンドで行っているが、データ量増加時は
     // GET /summary/monthly?year= のようなバックエンド集計APIへの切り替えを検討すること
@@ -66,7 +76,7 @@ async function loadData() {
   }
 }
 
-const apiParams = computed(() => ({ year: apiYear.value, month: apiMonth.value }))
+const apiParams = computed(() => ({ year: apiYear.value, month: apiMonth.value, week: apiWeek.value }))
 
 onMounted(loadData)
 watch(apiParams, loadData, { deep: true })
@@ -139,6 +149,7 @@ function formatAmount(n: number) {
     <div class="d-flex flex-wrap align-center ga-2 mb-4">
       <v-btn-toggle v-model="periodMode" mandatory density="compact" color="primary">
         <v-btn value="currentMonth">今月</v-btn>
+        <v-btn value="currentWeek">今週</v-btn>
         <v-btn value="currentYear">今年</v-btn>
         <v-btn value="month">月選択</v-btn>
         <v-btn value="year">年選択</v-btn>
