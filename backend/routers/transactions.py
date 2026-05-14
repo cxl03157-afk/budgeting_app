@@ -14,10 +14,15 @@ router = APIRouter(prefix="/transactions", tags=["transactions"])
 def list_transactions(
     type: Literal["income", "expense"] | None = Query(None),
     category_id: int | None = Query(None, ge=1),
+    subcategory_id: int | None = Query(None, ge=1),
     year: int | None = Query(None, ge=2000, le=2100),
     month: int | None = Query(None, ge=1, le=12),
+    week: int | None = Query(None, ge=1, le=5),
     db: Session = Depends(get_db),
 ):
+    if week is not None and (year is None or month is None):
+        raise HTTPException(status_code=400, detail="week には year と month の指定が必要です")
+
     q = db.query(Transaction)
 
     if type is not None:
@@ -26,19 +31,25 @@ def list_transactions(
     if category_id is not None:
         q = q.filter(Transaction.category_id == category_id)
 
+    if subcategory_id is not None:
+        q = q.filter(Transaction.subcategory_id == subcategory_id)
+
     # idx_date を活用するため MONTH() 関数ではなく範囲比較を使う
+    # 週は暦週ではなく簡易週（第1週: 1〜7日, 第2週: 8〜14日, 第3週: 15〜21日, 第4週: 22〜28日, 第5週: 29日〜月末）
     if year is not None and month is not None:
-        import calendar
-        _, last_day = calendar.monthrange(year, month)
-        date_from = date(year, month, 1)
         next_month = month % 12 + 1
         next_year = year + (1 if month == 12 else 0)
-        date_to = date(next_year, next_month, 1)
-        q = q.filter(Transaction.date >= date_from, Transaction.date < date_to)
+        if week is not None:
+            week_starts = {1: 1, 2: 8, 3: 15, 4: 22, 5: 29}
+            week_ends   = {1: 7, 2: 14, 3: 21, 4: 28}
+            d_from = date(year, month, week_starts[week])
+            d_to = date(next_year, next_month, 1) if week == 5 else date(year, month, week_ends[week] + 1)
+        else:
+            d_from = date(year, month, 1)
+            d_to = date(next_year, next_month, 1)
+        q = q.filter(Transaction.date >= d_from, Transaction.date < d_to)
     elif year is not None:
-        date_from = date(year, 1, 1)
-        date_to = date(year + 1, 1, 1)
-        q = q.filter(Transaction.date >= date_from, Transaction.date < date_to)
+        q = q.filter(Transaction.date >= date(year, 1, 1), Transaction.date < date(year + 1, 1, 1))
 
     transactions = q.order_by(Transaction.date.desc()).all()
 

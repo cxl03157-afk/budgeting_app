@@ -12,6 +12,7 @@ import {
   type TransactionType,
   type RecurringType,
   type FilterParams,
+  type PeriodMode,
 } from '../api/index'
 
 // --- 一覧表示 ---
@@ -20,10 +21,17 @@ const result = ref<TransactionListResponse>({ items: [], total_income: 0, total_
 const loading = ref(false)
 const errorMessage = ref<string | null>(null)
 
+const now = new Date()
+const todayYear = now.getFullYear()
+const todayMonth = now.getMonth() + 1
+
 const filterType = ref<TransactionType | null>(null)
 const filterCategoryId = ref<number | null>(null)
 const filterYear = ref<number | null>(null)
 const filterMonth = ref<number | null>(null)
+const filterPeriodMode = ref<PeriodMode>('monthly')
+const filterSubcategoryId = ref<number | null>(null)
+const filterWeek = ref<number | null>(null)
 
 const categoryMap = computed(() =>
   Object.fromEntries(categories.value.map((c) => [c.id, c]))
@@ -34,9 +42,16 @@ const typeOptions = [
   { title: '収入のみ', value: 'income' },
   { title: '支出のみ', value: 'expense' },
 ]
+const periodModeOptions: { title: string; value: PeriodMode }[] = [
+  { title: '月別', value: 'monthly' },
+  { title: '週別', value: 'weekly' },
+  { title: '年別', value: 'yearly' },
+]
 const categoryOptions = computed(() => [
   { title: 'すべて', value: null },
-  ...categories.value.map((c) => ({ title: c.name, value: c.id })),
+  ...categories.value
+    .filter(c => filterType.value == null || c.type === filterType.value)
+    .map((c) => ({ title: c.name, value: c.id })),
 ])
 const yearOptions = [
   { title: 'すべて', value: null },
@@ -46,6 +61,19 @@ const monthOptions = [
   { title: 'すべて', value: null },
   ...[...Array(12)].map((_, i) => ({ title: `${i + 1}月`, value: i + 1 })),
 ]
+const weekOptions = [
+  { title: '第1週（1〜7日）',   value: 1 },
+  { title: '第2週（8〜14日）',  value: 2 },
+  { title: '第3週（15〜21日）', value: 3 },
+  { title: '第4週（22〜28日）', value: 4 },
+  { title: '第5週（29日〜月末）', value: 5 },
+]
+
+const filterSubcategoryOptions = computed(() => {
+  if (filterCategoryId.value == null) return []
+  const cat = categories.value.find(c => c.id === filterCategoryId.value)
+  return cat?.subcategories.map(s => ({ title: s.name, value: s.id })) ?? []
+})
 
 async function loadTransactions() {
   loading.value = true
@@ -54,8 +82,10 @@ async function loadTransactions() {
     const params: FilterParams = {}
     if (filterType.value != null) params.type = filterType.value
     if (filterCategoryId.value != null) params.category_id = filterCategoryId.value
+    if (filterSubcategoryId.value != null) params.subcategory_id = filterSubcategoryId.value
     if (filterYear.value != null) params.year = filterYear.value
-    if (filterMonth.value != null) params.month = filterMonth.value
+    if (filterMonth.value != null && filterPeriodMode.value !== 'yearly') params.month = filterMonth.value
+    if (filterWeek.value != null && filterPeriodMode.value === 'weekly') params.week = filterWeek.value
     result.value = await fetchTransactions(params)
   } catch (e) {
     errorMessage.value = e instanceof Error ? e.message : '取得に失敗しました'
@@ -64,7 +94,29 @@ async function loadTransactions() {
   }
 }
 
-watch([filterType, filterCategoryId, filterYear, filterMonth], () => loadTransactions())
+watch(filterType, () => {
+  filterCategoryId.value = null
+  filterSubcategoryId.value = null
+})
+
+watch(filterCategoryId, () => { filterSubcategoryId.value = null })
+
+watch(filterPeriodMode, (newMode) => {
+  if (newMode === 'yearly') {
+    filterMonth.value = null
+    filterWeek.value = null
+  } else if (newMode === 'weekly') {
+    if (filterMonth.value == null) filterMonth.value = todayMonth
+    filterWeek.value = null
+  } else {
+    filterWeek.value = null
+  }
+})
+
+watch(
+  [filterType, filterCategoryId, filterSubcategoryId, filterYear, filterMonth, filterWeek, filterPeriodMode],
+  () => loadTransactions()
+)
 
 onMounted(async () => {
   categories.value = await fetchCategoriesWithSubs()
@@ -234,6 +286,16 @@ async function submitForm() {
   }
 }
 
+function resetFilters() {
+  filterType.value = null
+  filterCategoryId.value = null
+  filterSubcategoryId.value = null
+  filterYear.value = todayYear
+  filterMonth.value = todayMonth
+  filterWeek.value = null
+  filterPeriodMode.value = 'monthly'
+}
+
 // --- 成功通知 ---
 const snackbar = ref(false)
 const snackbarMessage = ref('')
@@ -249,9 +311,9 @@ const snackbarMessage = ref('')
       </v-btn>
     </div>
 
-    <!-- フィルターバー -->
-    <v-row dense class="mb-4">
-      <v-col cols="12" sm="3">
+    <!-- フィルターバー 1段目: 期間系 -->
+    <v-row dense class="mb-2">
+      <v-col cols="12" sm="2">
         <v-select
           v-model="filterType"
           :items="typeOptions"
@@ -263,6 +325,57 @@ const snackbarMessage = ref('')
           clearable
         />
       </v-col>
+      <v-col cols="12" sm="2">
+        <v-select
+          v-model="filterPeriodMode"
+          :items="periodModeOptions"
+          item-title="title"
+          item-value="value"
+          label="集計期間"
+          density="compact"
+          hide-details
+        />
+      </v-col>
+      <v-col cols="12" sm="2">
+        <v-select
+          v-model="filterYear"
+          :items="yearOptions"
+          item-title="title"
+          item-value="value"
+          label="年"
+          density="compact"
+          hide-details
+          clearable
+        />
+      </v-col>
+      <v-col v-if="filterPeriodMode !== 'yearly'" cols="12" sm="2">
+        <v-select
+          v-model="filterMonth"
+          :items="monthOptions"
+          item-title="title"
+          item-value="value"
+          label="月"
+          density="compact"
+          hide-details
+          clearable
+        />
+      </v-col>
+      <v-col v-if="filterPeriodMode === 'weekly'" cols="12" sm="2">
+        <v-select
+          v-model="filterWeek"
+          :items="weekOptions"
+          item-title="title"
+          item-value="value"
+          label="週"
+          density="compact"
+          hide-details
+          clearable
+        />
+      </v-col>
+    </v-row>
+
+    <!-- フィルターバー 2段目: カテゴリ系 + リセット -->
+    <v-row dense class="mb-4">
       <v-col cols="12" sm="3">
         <v-select
           v-model="filterCategoryId"
@@ -275,29 +388,20 @@ const snackbarMessage = ref('')
           clearable
         />
       </v-col>
-      <v-col cols="12" sm="3">
+      <v-col v-if="filterSubcategoryOptions.length > 0" cols="12" sm="3">
         <v-select
-          v-model="filterYear"
-          :items="yearOptions"
+          v-model="filterSubcategoryId"
+          :items="[{ title: 'すべて', value: null }, ...filterSubcategoryOptions]"
           item-title="title"
           item-value="value"
-          label="年"
+          label="サブカテゴリ"
           density="compact"
           hide-details
           clearable
         />
       </v-col>
-      <v-col cols="12" sm="3">
-        <v-select
-          v-model="filterMonth"
-          :items="monthOptions"
-          item-title="title"
-          item-value="value"
-          label="月"
-          density="compact"
-          hide-details
-          clearable
-        />
+      <v-col cols="12" sm="2" class="d-flex align-center">
+        <v-btn variant="outlined" density="compact" @click="resetFilters">リセット</v-btn>
       </v-col>
     </v-row>
 
