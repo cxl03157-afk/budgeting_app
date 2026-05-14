@@ -6,6 +6,7 @@ import {
   deleteCategory,
   createSubcategory,
   deleteSubcategory,
+  updateSubcategory,
   type CategoryWithSubs,
   type TransactionType,
 } from '../api/index'
@@ -91,8 +92,12 @@ const subInputError = ref<Record<number, string | null>>({})
 const subInputLoading = ref<Record<number, boolean>>({})
 
 function toggleSubInput(categoryId: number) {
-  subInputOpen.value[categoryId] = !subInputOpen.value[categoryId]
-  if (!subInputOpen.value[categoryId]) {
+  const opening = !subInputOpen.value[categoryId]
+  // 他のすべてのフォーム（追加・編集）を閉じる
+  subInputOpen.value = {}
+  subEditOpen.value = {}
+  if (opening) {
+    subInputOpen.value[categoryId] = true
     subInputName.value[categoryId] = ''
     subInputError.value[categoryId] = null
   }
@@ -142,6 +147,44 @@ async function confirmDeleteSubcategory() {
     deleteSubError.value = e instanceof Error ? e.message : '削除に失敗しました'
   } finally {
     deleteSubLoading.value = false
+  }
+}
+
+// --- サブカテゴリ編集 ---
+const subEditOpen = ref<Record<number, boolean>>({})
+const subEditName = ref<Record<number, string>>({})
+const subEditError = ref<Record<number, string | null>>({})
+const subEditLoading = ref<Record<number, boolean>>({})
+
+function openSubEdit(subId: number, currentName: string) {
+  // 他のすべてのフォーム（追加・編集）を閉じる
+  subInputOpen.value = {}
+  subEditOpen.value = { [subId]: true }
+  subEditName.value[subId] = currentName
+  subEditError.value[subId] = null
+}
+
+function cancelSubEdit(subId: number) {
+  subEditOpen.value[subId] = false
+}
+
+async function submitSubEdit(categoryId: number, subId: number) {
+  const name = (subEditName.value[subId] ?? '').trim()
+  if (!name) {
+    subEditError.value[subId] = 'サブカテゴリ名を入力してください'
+    return
+  }
+  subEditLoading.value[subId] = true
+  subEditError.value[subId] = null
+  try {
+    await updateSubcategory(categoryId, subId, name)
+    subEditOpen.value[subId] = false
+    await loadCategories()
+    showSnackbar('サブカテゴリ名を更新しました')
+  } catch (e) {
+    subEditError.value[subId] = e instanceof Error ? e.message : '更新に失敗しました'
+  } finally {
+    subEditLoading.value[subId] = false
   }
 }
 
@@ -224,51 +267,82 @@ function showSnackbar(msg: string) {
             </template>
             <v-list-item-title class="font-weight-medium">{{ cat.name }}</v-list-item-title>
             <v-list-item-subtitle>
-              <span class="d-flex flex-wrap ga-1 mt-1">
-                <v-chip
-                  v-for="sub in cat.subcategories"
-                  :key="sub.id"
-                  size="x-small"
-                >
-                  {{ sub.name }}
-                  <v-icon
-                    end
-                    icon="mdi-close-circle"
-                    size="x-small"
-                    @click.stop="openDeleteSubcategory(cat.id, sub.id, sub.name)"
-                  />
-                </v-chip>
-                <v-chip
-                  v-if="subInputOpen[cat.id]"
-                  size="x-small"
-                  class="pa-0"
-                  style="overflow: visible"
-                >
+              <div class="mt-1">
+                <template v-for="sub in cat.subcategories" :key="sub.id">
+                  <!-- 編集モード：独立した行で広めに表示 -->
+                  <div v-if="subEditOpen[sub.id]" class="d-flex align-center ga-2 mb-2" style="max-width: 320px">
+                    <v-text-field
+                      v-model="subEditName[sub.id]"
+                      density="compact"
+                      hide-details="auto"
+                      :error-messages="subEditError[sub.id] ?? undefined"
+                      maxlength="30"
+                      @keyup.enter="submitSubEdit(cat.id, sub.id)"
+                      @keyup.escape="cancelSubEdit(sub.id)"
+                    />
+                    <v-btn
+                      icon="mdi-check"
+                      size="small"
+                      color="primary"
+                      variant="tonal"
+                      :loading="subEditLoading[sub.id]"
+                      @click="submitSubEdit(cat.id, sub.id)"
+                    />
+                    <v-btn
+                      icon="mdi-close"
+                      size="small"
+                      variant="text"
+                      :disabled="subEditLoading[sub.id]"
+                      @click="cancelSubEdit(sub.id)"
+                    />
+                  </div>
+                  <!-- 通常モード：チップ + 独立したアイコンボタン -->
+                  <span v-else class="d-inline-flex align-center ga-1 mr-2 mb-1">
+                    <v-chip size="small" variant="tonal">{{ sub.name }}</v-chip>
+                    <v-btn
+                      icon="mdi-pencil-outline"
+                      size="x-small"
+                      variant="text"
+                      @click.stop="openSubEdit(sub.id, sub.name)"
+                    />
+                    <v-btn
+                      icon="mdi-close-circle-outline"
+                      size="x-small"
+                      variant="text"
+                      color="error"
+                      @click.stop="openDeleteSubcategory(cat.id, sub.id, sub.name)"
+                    />
+                  </span>
+                </template>
+                <div v-if="subInputOpen[cat.id]" class="d-flex align-center ga-2 mt-1" style="max-width: 320px">
                   <v-text-field
                     v-model="subInputName[cat.id]"
                     density="compact"
-                    hide-details
-                    variant="plain"
-                    style="width: 90px; font-size: 12px"
-                    placeholder="名前"
+                    hide-details="auto"
+                    placeholder="サブカテゴリ名"
+                    maxlength="30"
                     :loading="subInputLoading[cat.id]"
                     :error-messages="subInputError[cat.id] ? [subInputError[cat.id]!] : []"
                     @keyup.enter="submitAddSubcategory(cat.id)"
+                    @keyup.escape="toggleSubInput(cat.id)"
                   />
                   <v-btn
                     icon="mdi-check"
-                    size="x-small"
-                    variant="text"
+                    size="small"
+                    color="primary"
+                    variant="tonal"
+                    :loading="subInputLoading[cat.id]"
                     @click="submitAddSubcategory(cat.id)"
                   />
                   <v-btn
                     icon="mdi-close"
-                    size="x-small"
+                    size="small"
                     variant="text"
+                    :disabled="subInputLoading[cat.id]"
                     @click="toggleSubInput(cat.id)"
                   />
-                </v-chip>
-              </span>
+                </div>
+              </div>
             </v-list-item-subtitle>
             <template #append>
               <v-btn
@@ -312,51 +386,82 @@ function showSnackbar(msg: string) {
             </template>
             <v-list-item-title class="font-weight-medium">{{ cat.name }}</v-list-item-title>
             <v-list-item-subtitle>
-              <span class="d-flex flex-wrap ga-1 mt-1">
-                <v-chip
-                  v-for="sub in cat.subcategories"
-                  :key="sub.id"
-                  size="x-small"
-                >
-                  {{ sub.name }}
-                  <v-icon
-                    end
-                    icon="mdi-close-circle"
-                    size="x-small"
-                    @click.stop="openDeleteSubcategory(cat.id, sub.id, sub.name)"
-                  />
-                </v-chip>
-                <v-chip
-                  v-if="subInputOpen[cat.id]"
-                  size="x-small"
-                  class="pa-0"
-                  style="overflow: visible"
-                >
+              <div class="mt-1">
+                <template v-for="sub in cat.subcategories" :key="sub.id">
+                  <!-- 編集モード：独立した行で広めに表示 -->
+                  <div v-if="subEditOpen[sub.id]" class="d-flex align-center ga-2 mb-2" style="max-width: 320px">
+                    <v-text-field
+                      v-model="subEditName[sub.id]"
+                      density="compact"
+                      hide-details="auto"
+                      :error-messages="subEditError[sub.id] ?? undefined"
+                      maxlength="30"
+                      @keyup.enter="submitSubEdit(cat.id, sub.id)"
+                      @keyup.escape="cancelSubEdit(sub.id)"
+                    />
+                    <v-btn
+                      icon="mdi-check"
+                      size="small"
+                      color="primary"
+                      variant="tonal"
+                      :loading="subEditLoading[sub.id]"
+                      @click="submitSubEdit(cat.id, sub.id)"
+                    />
+                    <v-btn
+                      icon="mdi-close"
+                      size="small"
+                      variant="text"
+                      :disabled="subEditLoading[sub.id]"
+                      @click="cancelSubEdit(sub.id)"
+                    />
+                  </div>
+                  <!-- 通常モード：チップ + 独立したアイコンボタン -->
+                  <span v-else class="d-inline-flex align-center ga-1 mr-2 mb-1">
+                    <v-chip size="small" variant="tonal">{{ sub.name }}</v-chip>
+                    <v-btn
+                      icon="mdi-pencil-outline"
+                      size="x-small"
+                      variant="text"
+                      @click.stop="openSubEdit(sub.id, sub.name)"
+                    />
+                    <v-btn
+                      icon="mdi-close-circle-outline"
+                      size="x-small"
+                      variant="text"
+                      color="error"
+                      @click.stop="openDeleteSubcategory(cat.id, sub.id, sub.name)"
+                    />
+                  </span>
+                </template>
+                <div v-if="subInputOpen[cat.id]" class="d-flex align-center ga-2 mt-1" style="max-width: 320px">
                   <v-text-field
                     v-model="subInputName[cat.id]"
                     density="compact"
-                    hide-details
-                    variant="plain"
-                    style="width: 90px; font-size: 12px"
-                    placeholder="名前"
+                    hide-details="auto"
+                    placeholder="サブカテゴリ名"
+                    maxlength="30"
                     :loading="subInputLoading[cat.id]"
                     :error-messages="subInputError[cat.id] ? [subInputError[cat.id]!] : []"
                     @keyup.enter="submitAddSubcategory(cat.id)"
+                    @keyup.escape="toggleSubInput(cat.id)"
                   />
                   <v-btn
                     icon="mdi-check"
-                    size="x-small"
-                    variant="text"
+                    size="small"
+                    color="primary"
+                    variant="tonal"
+                    :loading="subInputLoading[cat.id]"
                     @click="submitAddSubcategory(cat.id)"
                   />
                   <v-btn
                     icon="mdi-close"
-                    size="x-small"
+                    size="small"
                     variant="text"
+                    :disabled="subInputLoading[cat.id]"
                     @click="toggleSubInput(cat.id)"
                   />
-                </v-chip>
-              </span>
+                </div>
+              </div>
             </v-list-item-subtitle>
             <template #append>
               <v-btn

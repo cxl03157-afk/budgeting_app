@@ -110,6 +110,23 @@ export async function deleteSubcategory(categoryId: number, subId: number): Prom
   }
 }
 
+export async function updateSubcategory(
+  categoryId: number,
+  subId: number,
+  name: string,
+): Promise<Subcategory> {
+  const res = await fetch(`/api/categories/${categoryId}/subcategories/${subId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail ?? `API error: ${res.status}`)
+  }
+  return res.json()
+}
+
 export async function fetchTransactions(params: FilterParams = {}): Promise<TransactionListResponse> {
   const query = new URLSearchParams()
   if (params.type != null) query.set('type', params.type)
