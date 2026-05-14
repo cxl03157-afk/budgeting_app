@@ -2,9 +2,9 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import {
   fetchTransactions,
-  fetchCategories,
+  fetchCategoriesWithSubs,
   type Transaction,
-  type Category,
+  type CategoryWithSubs,
   type TransactionType,
 } from '../api/index'
 import {
@@ -37,13 +37,23 @@ const selectedYear = ref(todayYear)
 const selectedMonth = ref(todayMonth)
 const barMode = ref<BarMode>('daily')
 const transactions = ref<Transaction[]>([])
-const categories = ref<Category[]>([])
+const categories = ref<CategoryWithSubs[]>([])
 const loading = ref(false)
 const errorMessage = ref<string | null>(null)
 
 const categoryMap = computed(() => {
-  const map = new Map<number, Category>()
+  const map = new Map<number, CategoryWithSubs>()
   for (const cat of categories.value) map.set(cat.id, cat)
+  return map
+})
+
+const subcategoryMap = computed(() => {
+  const map = new Map<number, string>()
+  for (const cat of categories.value) {
+    for (const sub of cat.subcategories) {
+      map.set(sub.id, sub.name)
+    }
+  }
   return map
 })
 
@@ -203,7 +213,7 @@ async function loadData() {
       type: displayType.value,
       ...(periodMode.value === 'month' ? { month: selectedMonth.value } : {}),
     }
-    const [txRes, catRes] = await Promise.all([fetchTransactions(params), fetchCategories()])
+    const [txRes, catRes] = await Promise.all([fetchTransactions(params), fetchCategoriesWithSubs()])
     transactions.value = txRes.items
     categories.value = catRes
   } catch (e) {
@@ -228,13 +238,18 @@ function escapeCsvField(value: string | number): string {
 }
 
 function exportCsv() {
-  const headers = ['日付', '区分', 'カテゴリ', 'メモ', '金額']
+  const headers = ['日付', '区分', 'カテゴリ', 'サブカテゴリ', 'メモ', '金額']
   const rows = transactions.value.map(tx => {
     const cat = categoryMap.value.get(tx.category_id)
+    const subName =
+      tx.subcategory_id != null
+        ? (subcategoryMap.value.get(tx.subcategory_id) ?? '不明なサブカテゴリ')
+        : ''
     return [
       tx.date,
       tx.type === 'income' ? '収入' : '支出',
       cat?.name ?? '不明なカテゴリ',
+      subName,
       tx.memo ?? '',
       tx.amount,
     ]
