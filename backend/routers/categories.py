@@ -9,6 +9,7 @@ from schemas import (
     CategoryCreateSchema,
     CategoryWithSubsResponse,
     SubcategoryCreateSchema,
+    SubcategoryUpdateSchema,
     SubcategoryResponse,
 )
 
@@ -79,6 +80,46 @@ def create_subcategory(
 
     subcategory = Subcategory(name=body.name, category_id=category_id, created_at=datetime.now())
     db.add(subcategory)
+    try:
+        db.commit()
+        db.refresh(subcategory)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="同じカテゴリ内に同名のサブカテゴリが既に存在します")
+    return subcategory
+
+
+@router.put("/{category_id}/subcategories/{sub_id}", response_model=SubcategoryResponse)
+def update_subcategory(
+    category_id: int,
+    sub_id: int,
+    body: SubcategoryUpdateSchema,
+    db: Session = Depends(get_db),
+):
+    category = db.get(Category, category_id)
+    if category is None:
+        raise HTTPException(status_code=404, detail="category not found")
+
+    subcategory = db.get(Subcategory, sub_id)
+    if subcategory is None or subcategory.category_id != category_id:
+        raise HTTPException(status_code=404, detail="subcategory not found")
+
+    new_name = body.name.strip()
+    if not new_name:
+        raise HTTPException(status_code=400, detail="サブカテゴリ名を入力してください")
+
+    if subcategory.name == new_name:
+        return subcategory
+
+    duplicate = (
+        db.query(Subcategory)
+        .filter(Subcategory.category_id == category_id, Subcategory.name == new_name)
+        .first()
+    )
+    if duplicate is not None:
+        raise HTTPException(status_code=409, detail="同じカテゴリ内に同名のサブカテゴリが既に存在します")
+
+    subcategory.name = new_name
     try:
         db.commit()
         db.refresh(subcategory)
