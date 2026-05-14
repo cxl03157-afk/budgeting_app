@@ -37,11 +37,15 @@ export interface TransactionListResponse {
   balance: number
 }
 
+export type PeriodMode = 'monthly' | 'weekly' | 'yearly'
+
 export interface FilterParams {
   type?: TransactionType
   category_id?: number
+  subcategory_id?: number
   year?: number
   month?: number
+  week?: number
 }
 
 async function request<T>(path: string): Promise<T> {
@@ -110,8 +114,10 @@ export async function fetchTransactions(params: FilterParams = {}): Promise<Tran
   const query = new URLSearchParams()
   if (params.type != null) query.set('type', params.type)
   if (params.category_id != null) query.set('category_id', String(params.category_id))
+  if (params.subcategory_id != null) query.set('subcategory_id', String(params.subcategory_id))
   if (params.year != null) query.set('year', String(params.year))
   if (params.month != null) query.set('month', String(params.month))
+  if (params.week != null) query.set('week', String(params.week))
   const qs = query.toString()
   return request<TransactionListResponse>(`/api/transactions${qs ? `?${qs}` : ''}`)
 }
