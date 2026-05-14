@@ -26,7 +26,6 @@ const categories = ref<Category[]>([])
 const budgetRows = ref<MonthlyBudgetRow[]>([])
 const loading = ref(false)
 const errorMessage = ref<string | null>(null)
-const categoryTab = ref<'expense' | 'income'>('expense')
 
 const isMonthMode = computed(
   () =>
@@ -97,36 +96,6 @@ const budgetAlert = computed(() => {
   return { expense, budget: row.amount, year: apiYear.value, month }
 })
 
-interface CategoryRow {
-  name: string
-  color: string
-  amount: number
-  ratio: string
-}
-
-const categoryRows = computed((): CategoryRow[] => {
-  if (!txData.value) return []
-  const items = txData.value.items.filter(t => t.type === categoryTab.value)
-  const total =
-    categoryTab.value === 'expense' ? txData.value.total_expense : txData.value.total_income
-
-  const map = new Map<number, number>()
-  for (const item of items) {
-    map.set(item.category_id, (map.get(item.category_id) ?? 0) + item.amount)
-  }
-
-  return Array.from(map.entries())
-    .sort((a, b) => b[1] - a[1])
-    .map(([id, amount]) => {
-      const cat = categoryMap.value.get(id)
-      return {
-        name: cat?.name ?? '不明なカテゴリ',
-        color: cat?.color ?? '#9e9e9e',
-        amount,
-        ratio: total > 0 ? `${Math.round((amount / total) * 100)}%` : '—',
-      }
-    })
-})
 
 const yearOptions = computed(() => {
   const years: number[] = []
@@ -136,6 +105,64 @@ const yearOptions = computed(() => {
 
 const monthOptions = Array.from({ length: 12 }, (_, i) => ({ title: `${i + 1}月`, value: i + 1 }))
 
+const dateRangeText = computed(() => {
+  const y = apiYear.value
+  const m = apiMonth.value
+  if (periodMode.value === 'currentWeek') {
+    const startDay = (todayWeek - 1) * 7 + 1
+    const lastDay = new Date(y, m!, 0).getDate()
+    const endDay = todayWeek === 5 ? lastDay : todayWeek * 7
+    return `${y}年${m}月${startDay}日 〜 ${m}月${endDay}日`
+  } else if (m != null) {
+    const lastDay = new Date(y, m, 0).getDate()
+    return `${y}年${m}月1日 〜 ${m}月${lastDay}日`
+  } else {
+    return `${y}年1月1日 〜 ${y}年12月31日`
+  }
+})
+
+interface CategoryRow {
+  type: 'income' | 'expense'
+  name: string
+  color: string
+  amount: number
+  ratio: string
+}
+
+const categoryRows = computed((): CategoryRow[] => {
+  if (!txData.value) return []
+  const expenseTotal = txData.value.total_expense
+  const incomeTotal = txData.value.total_income
+
+  const map = new Map<string, { type: 'income' | 'expense'; catId: number; amount: number }>()
+  for (const item of txData.value.items) {
+    const key = `${item.type}:${item.category_id}`
+    const existing = map.get(key)
+    if (existing) {
+      existing.amount += item.amount
+    } else {
+      map.set(key, { type: item.type as 'income' | 'expense', catId: item.category_id, amount: item.amount })
+    }
+  }
+
+  return [...map.values()]
+    .sort((a, b) => {
+      if (a.type !== b.type) return a.type === 'expense' ? -1 : 1
+      return b.amount - a.amount
+    })
+    .map(({ type, catId, amount }) => {
+      const cat = categoryMap.value.get(catId)
+      const total = type === 'expense' ? expenseTotal : incomeTotal
+      return {
+        type,
+        name: cat?.name ?? '不明なカテゴリ',
+        color: cat?.color ?? '#9e9e9e',
+        amount,
+        ratio: total > 0 ? `${Math.round((amount / total) * 100)}%` : '—',
+      }
+    })
+})
+
 function formatAmount(n: number) {
   return `¥${n.toLocaleString()}`
 }
@@ -143,43 +170,28 @@ function formatAmount(n: number) {
 
 <template>
   <v-container fluid class="pa-4">
-    <h2 class="text-h5 mb-4">ダッシュボード</h2>
-
-    <!-- 期間セレクター -->
-    <div class="d-flex flex-wrap align-center ga-2 mb-4">
-      <v-btn-toggle v-model="periodMode" mandatory density="compact" color="primary">
-        <v-btn value="currentMonth">今月</v-btn>
-        <v-btn value="currentWeek">今週</v-btn>
-        <v-btn value="currentYear">今年</v-btn>
-        <v-btn value="month">月選択</v-btn>
-        <v-btn value="year">年選択</v-btn>
-      </v-btn-toggle>
-
-      <template v-if="periodMode === 'month'">
-        <v-select
-          v-model="selectedYear"
-          :items="yearOptions"
-          density="compact"
-          hide-details
-          style="max-width: 110px"
-        />
-        <v-select
-          v-model="selectedMonth"
-          :items="monthOptions"
-          density="compact"
-          hide-details
-          style="max-width: 100px"
-        />
-      </template>
-      <template v-else-if="periodMode === 'year'">
-        <v-select
-          v-model="selectedYear"
-          :items="yearOptions"
-          density="compact"
-          hide-details
-          style="max-width: 110px"
-        />
-      </template>
+    <!-- ヘッダー：タイトル左 + 期間ボタン右（日付範囲はボタン下に右寄せ） -->
+    <div class="d-flex align-start justify-space-between flex-wrap ga-2 mb-4">
+      <h2 class="text-h5">ダッシュボード</h2>
+      <div class="d-flex flex-column align-end ga-1">
+        <div class="d-flex flex-wrap align-center ga-2">
+          <v-btn-toggle v-model="periodMode" mandatory density="compact" color="primary">
+            <v-btn value="currentMonth">今月</v-btn>
+            <v-btn value="currentWeek">今週</v-btn>
+            <v-btn value="currentYear">今年</v-btn>
+            <v-btn value="month">月選択</v-btn>
+            <v-btn value="year">年選択</v-btn>
+          </v-btn-toggle>
+          <template v-if="periodMode === 'month'">
+            <v-select v-model="selectedYear" :items="yearOptions" density="compact" hide-details style="max-width: 110px" />
+            <v-select v-model="selectedMonth" :items="monthOptions" density="compact" hide-details style="max-width: 100px" />
+          </template>
+          <template v-else-if="periodMode === 'year'">
+            <v-select v-model="selectedYear" :items="yearOptions" density="compact" hide-details style="max-width: 110px" />
+          </template>
+        </div>
+        <div class="text-body-2 text-medium-emphasis">{{ dateRangeText }}</div>
+      </div>
     </div>
 
     <!-- ローディング -->
@@ -191,47 +203,33 @@ function formatAmount(n: number) {
     </v-alert>
 
     <!-- 予算超過アラート（月単位モードのみ） -->
-    <v-alert
-      v-if="budgetAlert"
-      type="warning"
-      density="compact"
-      icon="mdi-alert"
-      class="mb-4"
-    >
-      {{ budgetAlert.year }}年{{ budgetAlert.month }}月の支出が予算を超過しています
-      （支出 {{ formatAmount(budgetAlert.expense) }} / 予算 {{ formatAmount(budgetAlert.budget) }}）
+    <v-alert v-if="budgetAlert" type="warning" density="compact" icon="mdi-alert" class="mb-4">
+      支出が予算を超過しています
     </v-alert>
 
     <!-- サマリーカード -->
     <v-row v-if="txData" class="mb-6">
       <v-col cols="12" sm="4">
-        <v-card variant="outlined">
+        <v-card variant="tonal" color="green">
           <v-card-text class="text-center">
-            <div class="text-caption text-medium-emphasis mb-1">収入合計</div>
-            <div class="text-h5 font-weight-bold text-green">
-              {{ formatAmount(txData.total_income) }}
-            </div>
+            <div class="text-caption mb-1">収入合計</div>
+            <div class="text-h5 font-weight-bold text-green">{{ formatAmount(txData.total_income) }}</div>
           </v-card-text>
         </v-card>
       </v-col>
       <v-col cols="12" sm="4">
-        <v-card variant="outlined">
+        <v-card variant="tonal" color="red">
           <v-card-text class="text-center">
-            <div class="text-caption text-medium-emphasis mb-1">支出合計</div>
-            <div class="text-h5 font-weight-bold text-red">
-              {{ formatAmount(txData.total_expense) }}
-            </div>
+            <div class="text-caption mb-1">支出合計</div>
+            <div class="text-h5 font-weight-bold text-red">{{ formatAmount(txData.total_expense) }}</div>
           </v-card-text>
         </v-card>
       </v-col>
       <v-col cols="12" sm="4">
-        <v-card variant="outlined">
+        <v-card variant="tonal" :color="txData.balance >= 0 ? 'indigo' : 'orange'">
           <v-card-text class="text-center">
-            <div class="text-caption text-medium-emphasis mb-1">残高</div>
-            <div
-              class="text-h5 font-weight-bold"
-              :class="txData.balance >= 0 ? 'text-green' : 'text-red'"
-            >
+            <div class="text-caption mb-1">残高</div>
+            <div class="text-h5 font-weight-bold" :class="txData.balance >= 0 ? 'text-indigo' : 'text-orange'">
               {{ formatAmount(txData.balance) }}
             </div>
           </v-card-text>
@@ -239,29 +237,28 @@ function formatAmount(n: number) {
       </v-col>
     </v-row>
 
-    <!-- カテゴリ別内訳 -->
+    <!-- カテゴリ別内訳（支出・収入統合） -->
     <div v-if="txData">
       <h3 class="text-subtitle-1 font-weight-bold mb-2">カテゴリ別内訳</h3>
-      <v-btn-toggle v-model="categoryTab" mandatory density="compact" color="primary" class="mb-3">
-        <v-btn value="expense">支出</v-btn>
-        <v-btn value="income">収入</v-btn>
-      </v-btn-toggle>
-
       <v-table v-if="categoryRows.length > 0" density="compact" hover>
         <thead>
           <tr>
+            <th>区分</th>
             <th>カテゴリ</th>
             <th class="text-right">金額</th>
             <th class="text-right">割合</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in categoryRows" :key="row.name">
+          <tr v-for="row in categoryRows" :key="`${row.type}:${row.name}`">
+            <td>
+              <v-chip size="small" :color="row.type === 'income' ? 'green' : 'red'" variant="tonal">
+                {{ row.type === 'income' ? '収入' : '支出' }}
+              </v-chip>
+            </td>
             <td>
               <div class="d-flex align-center ga-2">
-                <span
-                  :style="{ background: row.color, width: '10px', height: '10px', borderRadius: '50%', display: 'inline-block', flexShrink: '0' }"
-                />
+                <span :style="{ background: row.color, width: '10px', height: '10px', borderRadius: '50%', display: 'inline-block', flexShrink: '0' }" />
                 {{ row.name }}
               </div>
             </td>
