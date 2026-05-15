@@ -7,6 +7,7 @@ from models import Category, Subcategory
 from schemas import (
     CategoryResponse,
     CategoryCreateSchema,
+    CategoryUpdateSchema,
     CategoryWithSubsResponse,
     SubcategoryCreateSchema,
     SubcategoryUpdateSchema,
@@ -50,6 +51,39 @@ def create_category(body: CategoryCreateSchema, db: Session = Depends(get_db)):
     db.add(category)
     db.commit()
     db.refresh(category)
+    return category
+
+
+@router.put("/{category_id}", response_model=CategoryResponse)
+def update_category(
+    category_id: int,
+    body: CategoryUpdateSchema,
+    db: Session = Depends(get_db),
+):
+    category = db.get(Category, category_id)
+    if category is None:
+        raise HTTPException(status_code=404, detail="category not found")
+
+    name = body.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="カテゴリ名を入力してください")
+
+    duplicate = (
+        db.query(Category)
+        .filter(Category.name == name, Category.type == category.type, Category.id != category_id)
+        .first()
+    )
+    if duplicate is not None:
+        raise HTTPException(status_code=409, detail="同じ区分に同名のカテゴリが既に存在します")
+
+    category.name = name
+    category.color = body.color
+    try:
+        db.commit()
+        db.refresh(category)
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="更新に失敗しました")
     return category
 
 

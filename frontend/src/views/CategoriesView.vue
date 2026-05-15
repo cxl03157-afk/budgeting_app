@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import {
   fetchCategoriesWithSubs,
   createCategory,
+  updateCategory,
   deleteCategory,
   createSubcategory,
   deleteSubcategory,
@@ -172,6 +173,49 @@ async function submitSubEdit(categoryId: number, subId: number) {
   }
 }
 
+// --- カテゴリ編集 ---
+const editCategoryDialog = ref(false)
+const editingCategory = ref<CategoryWithSubs | null>(null)
+const editCategoryName = ref('')
+const editCategoryColor = ref('')
+const editCategorySaving = ref(false)
+const editCategoryError = ref<string | null>(null)
+
+function openEditCategory(cat: CategoryWithSubs) {
+  editingCategory.value = cat
+  editCategoryName.value = cat.name
+  editCategoryColor.value = cat.color
+  editCategoryError.value = null
+  editCategoryDialog.value = true
+}
+
+function closeEditCategoryDialog() {
+  editCategoryDialog.value = false
+  editingCategory.value = null
+  editCategoryName.value = ''
+  editCategoryColor.value = ''
+  editCategoryError.value = null
+}
+
+async function saveEditCategory() {
+  if (!editingCategory.value || editCategorySaving.value) return
+  editCategorySaving.value = true
+  editCategoryError.value = null
+  try {
+    await updateCategory(editingCategory.value.id, {
+      name: editCategoryName.value.trim(),
+      color: editCategoryColor.value,
+    })
+    closeEditCategoryDialog()
+    await loadCategories()
+    showSnackbar('カテゴリを更新しました')
+  } catch (e) {
+    editCategoryError.value = e instanceof Error ? e.message : '更新に失敗しました'
+  } finally {
+    editCategorySaving.value = false
+  }
+}
+
 // --- スナックバー ---
 const snackbar = ref(false)
 const snackbarMessage = ref('')
@@ -236,7 +280,11 @@ function showSnackbar(msg: string) {
             <span class="rounded-circle d-inline-block" :style="{ width: '12px', height: '12px', backgroundColor: cat.color, flexShrink: 0 }" />
             <span class="font-weight-medium">{{ cat.name }}</span>
           </div>
-          <v-btn v-if="!cat.is_default" icon="mdi-close" size="x-small" variant="text" color="error" @click="openDeleteCategory(cat)" />
+          <div class="d-flex align-center ga-1">
+            <v-icon v-if="cat.is_default" icon="mdi-lock-outline" size="small" color="medium-emphasis" title="デフォルトカテゴリは削除できません" />
+            <v-btn icon="mdi-pencil-outline" size="x-small" variant="text" @click="openEditCategory(cat)" />
+            <v-btn v-if="!cat.is_default" icon="mdi-close" size="x-small" variant="text" color="error" @click="openDeleteCategory(cat)" />
+          </div>
         </div>
         <!-- サブカテゴリチップ -->
         <div class="mb-2">
@@ -288,7 +336,11 @@ function showSnackbar(msg: string) {
             <span class="rounded-circle d-inline-block" :style="{ width: '12px', height: '12px', backgroundColor: cat.color, flexShrink: 0 }" />
             <span class="font-weight-medium">{{ cat.name }}</span>
           </div>
-          <v-btn v-if="!cat.is_default" icon="mdi-close" size="x-small" variant="text" color="error" @click="openDeleteCategory(cat)" />
+          <div class="d-flex align-center ga-1">
+            <v-icon v-if="cat.is_default" icon="mdi-lock-outline" size="small" color="medium-emphasis" title="デフォルトカテゴリは削除できません" />
+            <v-btn icon="mdi-pencil-outline" size="x-small" variant="text" @click="openEditCategory(cat)" />
+            <v-btn v-if="!cat.is_default" icon="mdi-close" size="x-small" variant="text" color="error" @click="openDeleteCategory(cat)" />
+          </div>
         </div>
         <div class="mb-2">
           <template v-for="sub in cat.subcategories" :key="sub.id">
@@ -328,6 +380,38 @@ function showSnackbar(msg: string) {
       </v-card>
       <p v-if="incomeCategories().length === 0" class="text-medium-emphasis text-body-2">なし</p>
     </div>
+
+    <!-- カテゴリ編集ダイアログ -->
+    <v-dialog v-model="editCategoryDialog" max-width="400" persistent>
+      <v-card v-if="editingCategory">
+        <v-card-title class="pt-4 px-6">カテゴリを編集</v-card-title>
+        <v-card-text class="px-6">
+          <v-alert v-if="editCategoryError" type="error" density="compact" class="mb-3">
+            {{ editCategoryError }}
+          </v-alert>
+          <v-text-field
+            v-model="editCategoryName"
+            label="カテゴリ名"
+            maxlength="20"
+            density="compact"
+            class="mb-3"
+          />
+          <div class="d-flex align-center ga-3">
+            <span class="text-body-2">カラー</span>
+            <input
+              v-model="editCategoryColor"
+              type="color"
+              style="width: 36px; height: 36px; border: none; padding: 0; cursor: pointer; border-radius: 4px"
+            />
+          </div>
+        </v-card-text>
+        <v-card-actions class="px-6 pb-4">
+          <v-spacer />
+          <v-btn variant="text" :disabled="editCategorySaving" @click="closeEditCategoryDialog">キャンセル</v-btn>
+          <v-btn color="primary" variant="flat" :loading="editCategorySaving" @click="saveEditCategory">保存</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- カテゴリ削除確認ダイアログ -->
     <v-dialog :model-value="deleteCategoryTarget !== null" max-width="360" persistent>
