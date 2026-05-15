@@ -4,13 +4,14 @@
 
 | レイヤー | 技術 | バージョン |
 |---------|------|-----------|
-| フロントエンド | Vue.js 3 + TypeScript + Vuetify 3 | Vue 3.4 / Vuetify 3.x |
-| バックエンド | Python + FastAPI + SQLAlchemy | Python 3.12 / FastAPI 0.115 / SQLAlchemy 2.0 |
-| バリデーション | Pydantic | 2.7.x |
-| マイグレーション | Alembic | 1.13.x |
-| MySQL ドライバー | PyMySQL | 1.1.x |
+| フロントエンド | Vue.js 3 + TypeScript + Vuetify 3 | Vue 3.5.34 / Vuetify 3.12.6 / TypeScript 6.0.2 |
+| バックエンド | Python + FastAPI + SQLAlchemy | Python 3.14 / FastAPI 0.136.1 / SQLAlchemy 2.0.49 |
+| バリデーション | Pydantic | 2.13.4 |
+| マイグレーション | Alembic | 1.18.4 |
+| MySQL ドライバー | PyMySQL | 1.1.3 |
 | データベース | MySQL | 8.4 LTS（EOL 2032年4月） |
-| インフラ（AWS） | S3+CloudFront / EC2 t2.micro / RDS db.t3.micro | — |
+| インフラ（ローカル） | Docker Compose | — |
+| インフラ（本番予定） | S3+CloudFront / EC2 t2.micro / RDS db.t3.micro | — |
 | プロトタイプ | Vanilla JS + localStorage | — |
 
 ---
