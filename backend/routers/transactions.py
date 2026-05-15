@@ -67,15 +67,15 @@ def list_transactions(
 def _validate_category(body: TransactionCreateSchema, db: Session) -> None:
     category = db.get(Category, body.category_id)
     if category is None:
-        raise HTTPException(status_code=400, detail="category not found")
+        raise HTTPException(status_code=404, detail="カテゴリが見つかりません")
     if category.type != body.type:
-        raise HTTPException(status_code=400, detail="category type does not match transaction type")
+        raise HTTPException(status_code=400, detail="カテゴリの区分が取引の区分と一致しません")
     if body.subcategory_id is not None:
         subcat = db.get(Subcategory, body.subcategory_id)
         if subcat is None:
-            raise HTTPException(status_code=400, detail="subcategory not found")
+            raise HTTPException(status_code=404, detail="サブカテゴリが見つかりません")
         if subcat.category_id != body.category_id:
-            raise HTTPException(status_code=400, detail="subcategory does not belong to category")
+            raise HTTPException(status_code=400, detail="サブカテゴリが指定されたカテゴリに属していません")
 
 
 @router.post("", response_model=TransactionResponse, status_code=201)
@@ -90,7 +90,7 @@ def create_transaction(body: TransactionCreateSchema, db: Session = Depends(get_
         db.refresh(tx)
     except SQLAlchemyError:
         db.rollback()
-        raise HTTPException(status_code=500, detail="database error")
+        raise HTTPException(status_code=500, detail="データベースエラーが発生しました")
     return tx
 
 
@@ -98,7 +98,7 @@ def create_transaction(body: TransactionCreateSchema, db: Session = Depends(get_
 def update_transaction(transaction_id: int, body: TransactionCreateSchema, db: Session = Depends(get_db)):
     tx = db.get(Transaction, transaction_id)
     if tx is None:
-        raise HTTPException(status_code=404, detail="transaction not found")
+        raise HTTPException(status_code=404, detail="取引が見つかりません")
     _validate_category(body, db)
     for k, v in body.model_dump().items():
         setattr(tx, k, v)
@@ -108,7 +108,7 @@ def update_transaction(transaction_id: int, body: TransactionCreateSchema, db: S
         db.refresh(tx)
     except SQLAlchemyError:
         db.rollback()
-        raise HTTPException(status_code=500, detail="database error")
+        raise HTTPException(status_code=500, detail="データベースエラーが発生しました")
     return tx
 
 
@@ -117,11 +117,11 @@ def delete_transaction(transaction_id: int, db: Session = Depends(get_db)):
     # ハード削除: original_id FK は ON DELETE SET NULL のため参照整合性を保つ
     tx = db.get(Transaction, transaction_id)
     if tx is None:
-        raise HTTPException(status_code=404, detail="transaction not found")
+        raise HTTPException(status_code=404, detail="取引が見つかりません")
     try:
         db.delete(tx)
         db.commit()
     except SQLAlchemyError:
         db.rollback()
-        raise HTTPException(status_code=500, detail="database error")
+        raise HTTPException(status_code=500, detail="データベースエラーが発生しました")
     # 204 No Content: レスポンスボディなし

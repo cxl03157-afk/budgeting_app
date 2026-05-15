@@ -62,7 +62,7 @@ def update_category(
 ):
     category = db.get(Category, category_id)
     if category is None:
-        raise HTTPException(status_code=404, detail="category not found")
+        raise HTTPException(status_code=404, detail="カテゴリが見つかりません")
 
     name = body.name.strip()
     if not name:
@@ -91,7 +91,7 @@ def update_category(
 def delete_category(category_id: int, db: Session = Depends(get_db)):
     category = db.get(Category, category_id)
     if category is None:
-        raise HTTPException(status_code=404, detail="category not found")
+        raise HTTPException(status_code=404, detail="カテゴリが見つかりません")
     if category.is_default:
         raise HTTPException(status_code=403, detail="デフォルトカテゴリは削除できません")
     try:
@@ -110,7 +110,7 @@ def create_subcategory(
 ):
     category = db.get(Category, category_id)
     if category is None:
-        raise HTTPException(status_code=404, detail="category not found")
+        raise HTTPException(status_code=404, detail="カテゴリが見つかりません")
 
     subcategory = Subcategory(name=body.name, category_id=category_id, created_at=datetime.now())
     db.add(subcategory)
@@ -132,11 +132,11 @@ def update_subcategory(
 ):
     category = db.get(Category, category_id)
     if category is None:
-        raise HTTPException(status_code=404, detail="category not found")
+        raise HTTPException(status_code=404, detail="カテゴリが見つかりません")
 
     subcategory = db.get(Subcategory, sub_id)
     if subcategory is None or subcategory.category_id != category_id:
-        raise HTTPException(status_code=404, detail="subcategory not found")
+        raise HTTPException(status_code=404, detail="サブカテゴリが見つかりません")
 
     new_name = body.name.strip()
     if not new_name:
@@ -167,11 +167,11 @@ def update_subcategory(
 def delete_subcategory(category_id: int, sub_id: int, db: Session = Depends(get_db)):
     category = db.get(Category, category_id)
     if category is None:
-        raise HTTPException(status_code=404, detail="category not found")
+        raise HTTPException(status_code=404, detail="カテゴリが見つかりません")
 
     subcategory = db.get(Subcategory, sub_id)
     if subcategory is None or subcategory.category_id != category_id:
-        raise HTTPException(status_code=404, detail="subcategory not found")
+        raise HTTPException(status_code=404, detail="サブカテゴリが見つかりません")
 
     db.delete(subcategory)
     db.commit()
