@@ -2,7 +2,25 @@
 
 収支の記録・集計・可視化を通じて家計管理を支援するシングルユーザー向け Web アプリ。
 
-## 機能一覧
+## スクリーンショット
+
+| ダッシュボード | 収支一覧 |
+|:-:|:-:|
+| ![ダッシュボード](docs/images/01_dashboard.png) | ![収支一覧](docs/images/02_transactions.png) |
+
+| 収支登録モーダル | カテゴリ管理 |
+|:-:|:-:|
+| ![収支登録](docs/images/03_modal.png) | ![カテゴリ管理](docs/images/04_categories.png) |
+
+| 予算設定 | グラフ・レポート |
+|:-:|:-:|
+| ![予算設定](docs/images/05_budget.png) | ![グラフ](docs/images/06_graph.png) |
+
+## デモ
+
+![デモ](docs/images/demo.gif)
+
+## 主な機能
 
 | 機能 | 内容 |
 |------|------|
@@ -10,7 +28,7 @@
 | カテゴリ管理 | カテゴリ・サブカテゴリの追加・編集・削除。デフォルトカテゴリ（15件）は削除不可・名前変更可 |
 | フィルター | 区分・カテゴリ・期間（月別/週別/年別）による絞り込み |
 | ダッシュボード | 収入合計・支出合計・残高の表示。期間切替・カテゴリ別内訳・予算超過アラート |
-| グラフ・レポート | カテゴリ別ドーナツグラフ・日別/週別/月別棒グラフ。CSVエクスポート |
+| グラフ・レポート | カテゴリ別ドーナツグラフ・日別/週別棒グラフ。CSV エクスポート |
 | 予算設定 | 月間予算の設定・変更・削除。貯金見込み額の表示 |
 | ダークモード | ライト/ダーク切替（設定はブラウザに保存） |
 
@@ -23,7 +41,74 @@
 | バックエンド | Python + FastAPI + SQLAlchemy | FastAPI 0.136 / SQLAlchemy 2.0 / Pydantic 2.13 |
 | データベース | MySQL 8.4 LTS | — |
 | インフラ（ローカル） | Docker Compose | — |
-| インフラ（本番） | AWS EC2 + Nginx + RDS MySQL | EC2 t2.micro / RDS db.t3.micro |
+| インフラ（AWS） | EC2 + Nginx + RDS MySQL + Terraform | EC2 t2.micro / RDS db.t3.micro |
+
+## AWSデプロイ環境
+
+> 認証機能未実装のため、Security Group で管理者 IP からのアクセスのみ許可しています。
+
+| 項目 | 内容 |
+|------|------|
+| URL | http://18.182.16.89 |
+| EC2 | t2.micro / Amazon Linux 2023 / ap-northeast-1 |
+| RDS | db.t3.micro / MySQL 8.4 / プライベートサブネット |
+| API ドキュメント | http://18.182.16.89/api/docs |
+
+**構成:**
+
+```
+ブラウザ → Nginx（:80）→ Vue.js SPA
+                       → /api/* → uvicorn（127.0.0.1:8000）→ RDS MySQL
+```
+
+> **注意:** Elastic IP 未使用のため EC2 再起動で IP が変わります。  
+> 最新 URL は `terraform output app_url` で確認してください。
+
+インフラは Terraform で管理。詳細は [docs/infrastructure.md](./docs/infrastructure.md) を参照。
+
+## 対応環境
+
+PC ブラウザのみ対応（Chrome / Firefox / Safari 最新版）。  
+スマートフォン・タブレットのレスポンシブ最適化はスコープ外です。
+
+## ローカル開発のセットアップ
+
+### 前提条件
+
+- Docker Desktop
+- Node.js 22 LTS
+- Python 3.12+
+
+### 1. データベース起動
+
+```bash
+docker compose up -d
+```
+
+MySQL が `localhost:3306` で起動します（初回起動時に `init.sql` でテーブルとデフォルトデータが自動投入されます）。
+
+### 2. バックエンド起動
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
+
+API が `http://localhost:8000` で起動します。  
+Swagger UI（API ドキュメント）: `http://localhost:8000/docs`
+
+### 3. フロントエンド起動
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+アプリが `http://localhost:5173` で起動します。
 
 ## ディレクトリ構成
 
@@ -53,96 +138,23 @@ budgeting_app/
 └── docker-compose.yml
 ```
 
-## セットアップ・起動手順
+## ドキュメント
 
-### 前提条件
+| ドキュメント | 内容 |
+|------------|------|
+| [要件定義書](./docs/要件定義書.md) | 機能要件・非機能要件・スコープ |
+| [機能仕様](./docs/features.md) | 機能詳細・ユースケース |
+| [画面設計](./docs/screens.md) | 画面一覧・レイアウト |
+| [DB 設計](./docs/database.md) | ER 図・テーブル定義 |
+| [技術選定](./docs/tech-stack.md) | 使用技術・選定理由 |
+| [インフラ手順書](./docs/infrastructure.md) | AWS デプロイ手順 |
 
-- Docker Desktop
-- Node.js 22 LTS
-- Python 3.12+（ローカル動作確認: 3.14.4、EC2 環境: 3.12）
-
-### 1. データベース起動
-
-```bash
-docker compose up -d
-```
-
-MySQL が `localhost:3306` で起動します（初回起動時に `init.sql` でテーブルとデフォルトデータが自動投入されます）。
-
-### 2. バックエンド起動
-
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate      # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn main:app --reload
-```
-
-API が `http://localhost:8000` で起動します。  
-APIドキュメント（Swagger UI）: `http://localhost:8000/docs`
-
-### 3. フロントエンド起動
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-アプリが `http://localhost:5173` で起動します。
-
-## API エンドポイント一覧
-
-| メソッド | パス | 説明 |
-|---------|------|------|
-| GET | `/categories` | カテゴリ一覧（サブカテゴリ含む） |
-| POST | `/categories` | カテゴリ追加 |
-| PUT | `/categories/{id}` | カテゴリ名・色の変更 |
-| DELETE | `/categories/{id}` | カテゴリ削除（デフォルトカテゴリは不可） |
-| POST | `/categories/{id}/subcategories` | サブカテゴリ追加 |
-| PUT | `/categories/{id}/subcategories/{sub_id}` | サブカテゴリ名変更 |
-| DELETE | `/categories/{id}/subcategories/{sub_id}` | サブカテゴリ削除 |
-| GET | `/transactions` | 収支一覧（フィルターパラメーター対応） |
-| POST | `/transactions` | 収支登録 |
-| PUT | `/transactions/{id}` | 収支編集 |
-| DELETE | `/transactions/{id}` | 収支削除 |
-| GET | `/budgets` | 予算一覧（`?year=YYYY`） |
-| POST | `/budgets` | 予算登録 |
-| PUT | `/budgets/{id}` | 予算変更 |
-| DELETE | `/budgets/{id}` | 予算削除 |
-| GET | `/health` | ヘルスチェック |
-
-## データベース
-
-### テーブル構成
-
-```
-categories      カテゴリマスタ（デフォルト15件）
-subcategories   サブカテゴリ（categoriesを参照）
-transactions    収支データ（categories/subcategoriesを参照）
-budgets         月間予算（年月でユニーク）
-```
-
-### デフォルトカテゴリ
-
-食費 / 日用品 / 娯楽費 / 交通費 / 衣類・美容 / 医療・健康 / 自動車費 / 教育・自己投資 / 水道・光熱費 / 住居費 / 保険 / 交際費 / 通信費 / 税・その他 / 収入
-
-## 開発ワークフロー
-
-詳細は [CLAUDE.md](./CLAUDE.md) を参照。
-
-1. GitHub Issues でタスクを作成
-2. ブランチを切る（`feature/issue-{N}-{内容}` など）
-3. 実装 → コミット（Conventional Commits）
-4. PR 作成 → `Closes #N` を本文に記載
-5. レビュー後 main へマージ
-
-## スコープ外
+## スコープ外・今後の改善
 
 - ユーザー認証・複数ユーザー対応
 - 銀行口座・外部サービス連携
-- 繰り返し取引の自動生成（DBスキーマのカラムは残存）
-- グラフの「収支合計」表示（支出のみ / 収入のみ のみ対応）
+- 繰り返し取引の自動生成（DB スキーマのカラムは残存）
+- グラフの「収支合計」表示（支出のみ / 収入のみのみ対応）
 - スマートフォン向けレスポンシブ最適化
-- レシートOCR・プッシュ通知
+- レシート OCR・プッシュ通知
+- Elastic IP による固定 URL
