@@ -41,3 +41,23 @@ def test_create_duplicate_category_returns_japanese_error():
     })
     assert response.status_code == 409
     assert "同名" in response.json()["detail"]
+
+
+# --- Issue B: コード品質改善テスト ---
+
+def test_categories_is_default_is_boolean():
+    """GET /categories → is_default が bool 型であること"""
+    response = client.get("/categories")
+    assert response.status_code == 200
+    cats = response.json()
+    assert len(cats) > 0
+    assert isinstance(cats[0]["is_default"], bool)
+
+
+def test_categories_always_includes_subcategories():
+    """GET /categories は常にサブカテゴリ付きで返すこと"""
+    response = client.get("/categories")
+    assert response.status_code == 200
+    cats = response.json()
+    assert len(cats) > 0
+    assert "subcategories" in cats[0]

@@ -6,7 +6,7 @@ export interface Category {
   name: string
   color: string
   type: TransactionType
-  is_default: number
+  is_default: boolean
 }
 
 export interface Subcategory {
@@ -27,7 +27,7 @@ export interface Transaction {
   subcategory_id: number | null
   memo: string | null
   recurring: RecurringType
-  auto_generated: number
+  auto_generated: boolean
 }
 
 export interface TransactionListResponse {
