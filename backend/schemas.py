@@ -10,7 +10,7 @@ class CategoryResponse(BaseModel):
     name: str
     color: str
     type: str
-    is_default: int
+    is_default: bool
 
 
 class TransactionResponse(BaseModel):
@@ -24,7 +24,7 @@ class TransactionResponse(BaseModel):
     subcategory_id: int | None
     memo: str | None
     recurring: str
-    auto_generated: int
+    auto_generated: bool
 
 
 class TransactionCreateSchema(BaseModel):

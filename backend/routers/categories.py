@@ -1,5 +1,5 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy.exc import IntegrityError
 from database import get_db
@@ -18,10 +18,7 @@ router = APIRouter(prefix="/categories", tags=["categories"])
 
 
 @router.get("", response_model=list[CategoryWithSubsResponse])
-def list_categories(
-    with_subcategories: bool = Query(False),
-    db: Session = Depends(get_db),
-):
+def list_categories(db: Session = Depends(get_db)):
     categories = (
         db.query(Category)
         .options(selectinload(Category.subcategories))

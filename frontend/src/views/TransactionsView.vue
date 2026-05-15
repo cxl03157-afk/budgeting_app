@@ -173,11 +173,6 @@ const initialForm = () => ({
 })
 const form = ref(initialForm())
 
-const recurringOptions = [
-  { title: 'なし', value: 'none' },
-  { title: '毎週', value: 'weekly' },
-  { title: '毎月', value: 'monthly' },
-]
 
 function getSubcategoryName(subcategoryId: number | null): string {
   if (subcategoryId == null) return '—'

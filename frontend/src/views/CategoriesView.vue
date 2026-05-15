@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import {
   fetchCategoriesWithSubs,
   createCategory,
@@ -30,8 +30,8 @@ async function loadCategories() {
 
 onMounted(loadCategories)
 
-const expenseCategories = () => categories.value.filter((c) => c.type === 'expense')
-const incomeCategories = () => categories.value.filter((c) => c.type === 'income')
+const expenseCategories = computed(() => categories.value.filter((c) => c.type === 'expense'))
+const incomeCategories = computed(() => categories.value.filter((c) => c.type === 'income'))
 
 // --- カテゴリ追加フォーム ---
 const addName = ref('')
@@ -39,6 +39,8 @@ const addColor = ref('#6366f1')
 const addType = ref<TransactionType>('expense')
 const addError = ref<string | null>(null)
 const addLoading = ref(false)
+
+watch(addName, () => { addError.value = null })
 
 async function submitAddCategory() {
   if (!addName.value.trim()) {
@@ -273,7 +275,7 @@ function showSnackbar(msg: string) {
     <!-- 支出カテゴリ -->
     <div class="text-subtitle-1 font-weight-bold mb-2">支出カテゴリ</div>
     <div class="d-flex flex-column ga-2 mb-6">
-      <v-card v-for="cat in expenseCategories()" :key="cat.id" variant="outlined" class="pa-3">
+      <v-card v-for="cat in expenseCategories" :key="cat.id" variant="outlined" class="pa-3">
         <!-- カテゴリ名行 -->
         <div class="d-flex align-center justify-space-between mb-2">
           <div class="d-flex align-center ga-2">
@@ -324,13 +326,13 @@ function showSnackbar(msg: string) {
           <v-btn color="primary" variant="tonal" size="small" :loading="subInputLoading[cat.id]" @click="submitAddSubcategory(cat.id)">追加</v-btn>
         </div>
       </v-card>
-      <p v-if="expenseCategories().length === 0" class="text-medium-emphasis text-body-2">なし</p>
+      <p v-if="expenseCategories.length === 0" class="text-medium-emphasis text-body-2">なし</p>
     </div>
 
     <!-- 収入カテゴリ -->
     <div class="text-subtitle-1 font-weight-bold mb-2">収入カテゴリ</div>
     <div class="d-flex flex-column ga-2">
-      <v-card v-for="cat in incomeCategories()" :key="cat.id" variant="outlined" class="pa-3">
+      <v-card v-for="cat in incomeCategories" :key="cat.id" variant="outlined" class="pa-3">
         <div class="d-flex align-center justify-space-between mb-2">
           <div class="d-flex align-center ga-2">
             <span class="rounded-circle d-inline-block" :style="{ width: '12px', height: '12px', backgroundColor: cat.color, flexShrink: 0 }" />
@@ -378,7 +380,7 @@ function showSnackbar(msg: string) {
           <v-btn color="primary" variant="tonal" size="small" :loading="subInputLoading[cat.id]" @click="submitAddSubcategory(cat.id)">追加</v-btn>
         </div>
       </v-card>
-      <p v-if="incomeCategories().length === 0" class="text-medium-emphasis text-body-2">なし</p>
+      <p v-if="incomeCategories.length === 0" class="text-medium-emphasis text-body-2">なし</p>
     </div>
 
     <!-- カテゴリ編集ダイアログ -->
