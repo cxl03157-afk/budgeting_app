@@ -79,6 +79,22 @@ export async function createCategory(data: {
   return res.json()
 }
 
+export async function updateCategory(
+  id: number,
+  data: { name: string; color: string },
+): Promise<Category> {
+  const res = await fetch(`/api/categories/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail ?? `API error: ${res.status}`)
+  }
+  return res.json()
+}
+
 export async function deleteCategory(id: number): Promise<void> {
   const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' })
   if (!res.ok) {

@@ -69,6 +69,11 @@ class SubcategoryUpdateSchema(BaseModel):
     name: str = Field(min_length=1, max_length=30)
 
 
+class CategoryUpdateSchema(BaseModel):
+    name: str = Field(min_length=1, max_length=20)
+    color: str = Field(pattern=r'^#[0-9a-fA-F]{6}$')
+
+
 class BudgetCreateSchema(BaseModel):
     year: int = Field(ge=2000, le=2100)
     month: int = Field(ge=1, le=12)
