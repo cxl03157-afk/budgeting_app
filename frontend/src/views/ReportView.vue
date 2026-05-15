@@ -281,15 +281,6 @@ function exportCsv() {
       <h2 class="text-h5">グラフ・レポート</h2>
       <div class="d-flex flex-wrap align-center ga-2">
         <v-select
-          v-model="periodMode"
-          :items="[{ title: '月別', value: 'month' }, { title: '年別', value: 'year' }]"
-          item-title="title"
-          item-value="value"
-          density="compact"
-          hide-details
-          style="max-width: 100px"
-        />
-        <v-select
           v-model="displayType"
           :items="[{ title: '支出のみ', value: 'expense' }, { title: '収入のみ', value: 'income' }]"
           item-title="title"
@@ -297,6 +288,15 @@ function exportCsv() {
           density="compact"
           hide-details
           style="max-width: 150px"
+        />
+        <v-select
+          v-model="periodMode"
+          :items="[{ title: '月別', value: 'month' }, { title: '年別', value: 'year' }]"
+          item-title="title"
+          item-value="value"
+          density="compact"
+          hide-details
+          style="max-width: 100px"
         />
         <v-select
           v-model="selectedYear"

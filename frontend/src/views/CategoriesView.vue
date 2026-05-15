@@ -289,14 +289,14 @@ function showSnackbar(msg: string) {
         <!-- サブカテゴリチップ -->
         <div class="mb-2">
           <template v-for="sub in cat.subcategories" :key="sub.id">
-            <div v-if="subEditOpen[sub.id]" class="d-inline-flex align-center ga-1 mr-2 mb-1" style="max-width: 280px">
+            <div v-if="subEditOpen[sub.id]" class="d-inline-flex align-center ga-1 mr-2 mb-2" style="min-width: 200px; max-width: 400px">
               <v-text-field
                 v-model="subEditName[sub.id]"
                 density="compact"
                 hide-details="auto"
                 :error-messages="subEditError[sub.id] ?? undefined"
                 maxlength="30"
-                @keyup.enter="submitSubEdit(cat.id, sub.id)"
+                @keydown.enter="(e: KeyboardEvent) => { if (!e.isComposing) submitSubEdit(cat.id, sub.id) }"
                 @keyup.escape="cancelSubEdit(sub.id)"
               />
               <v-btn icon="mdi-check" size="small" color="primary" variant="tonal" :loading="subEditLoading[sub.id]" @click="submitSubEdit(cat.id, sub.id)" />
@@ -319,7 +319,7 @@ function showSnackbar(msg: string) {
             maxlength="30"
             :loading="subInputLoading[cat.id]"
             :error-messages="subInputError[cat.id] ? [subInputError[cat.id]!] : []"
-            @keyup.enter="submitAddSubcategory(cat.id)"
+            @keydown.enter="(e: KeyboardEvent) => { if (!e.isComposing) submitAddSubcategory(cat.id) }"
           />
           <v-btn color="primary" variant="tonal" size="small" :loading="subInputLoading[cat.id]" @click="submitAddSubcategory(cat.id)">追加</v-btn>
         </div>
@@ -344,14 +344,14 @@ function showSnackbar(msg: string) {
         </div>
         <div class="mb-2">
           <template v-for="sub in cat.subcategories" :key="sub.id">
-            <div v-if="subEditOpen[sub.id]" class="d-inline-flex align-center ga-1 mr-2 mb-1" style="max-width: 280px">
+            <div v-if="subEditOpen[sub.id]" class="d-inline-flex align-center ga-1 mr-2 mb-2" style="min-width: 200px; max-width: 400px">
               <v-text-field
                 v-model="subEditName[sub.id]"
                 density="compact"
                 hide-details="auto"
                 :error-messages="subEditError[sub.id] ?? undefined"
                 maxlength="30"
-                @keyup.enter="submitSubEdit(cat.id, sub.id)"
+                @keydown.enter="(e: KeyboardEvent) => { if (!e.isComposing) submitSubEdit(cat.id, sub.id) }"
                 @keyup.escape="cancelSubEdit(sub.id)"
               />
               <v-btn icon="mdi-check" size="small" color="primary" variant="tonal" :loading="subEditLoading[sub.id]" @click="submitSubEdit(cat.id, sub.id)" />
@@ -373,7 +373,7 @@ function showSnackbar(msg: string) {
             maxlength="30"
             :loading="subInputLoading[cat.id]"
             :error-messages="subInputError[cat.id] ? [subInputError[cat.id]!] : []"
-            @keyup.enter="submitAddSubcategory(cat.id)"
+            @keydown.enter="(e: KeyboardEvent) => { if (!e.isComposing) submitAddSubcategory(cat.id) }"
           />
           <v-btn color="primary" variant="tonal" size="small" :loading="subInputLoading[cat.id]" @click="submitAddSubcategory(cat.id)">追加</v-btn>
         </div>
