@@ -2,7 +2,7 @@ from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import extract, func
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from database import get_db
 from models import Budget, Transaction
 from schemas import BudgetCreateSchema, BudgetUpdateSchema, BudgetResponse, MonthlyBudgetRow
@@ -72,8 +72,12 @@ def update_budget(budget_id: int, body: BudgetUpdateSchema, db: Session = Depend
         raise HTTPException(status_code=404, detail="予算が見つかりません")
     budget.amount = body.amount
     budget.updated_at = datetime.now()
-    db.commit()
-    db.refresh(budget)
+    try:
+        db.commit()
+        db.refresh(budget)
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="データベースエラーが発生しました")
     return budget
 
 
