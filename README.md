@@ -23,6 +23,7 @@
 | バックエンド | Python + FastAPI + SQLAlchemy | FastAPI 0.136 / SQLAlchemy 2.0 / Pydantic 2.13 |
 | データベース | MySQL 8.4 LTS | — |
 | インフラ（ローカル） | Docker Compose | — |
+| インフラ（本番） | AWS EC2 + Nginx + RDS MySQL | EC2 t2.micro / RDS db.t3.micro |
 
 ## ディレクトリ構成
 
@@ -42,10 +43,12 @@ budgeting_app/
 │       ├── api/index.ts        # API クライアント
 │       ├── views/              # 各画面コンポーネント
 │       └── plugins/vuetify.ts
+├── infra/
+│   └── terraform/    # AWS インフラ定義（EC2・RDS・VPC 等）
 ├── docker/
 │   ├── init.sql      # テーブル定義 + デフォルトデータ
 │   └── seed.sql      # 初期化用 TRUNCATE
-├── docs/             # 要件定義書・仕様書
+├── docs/             # 要件定義書・仕様書・インフラ手順書
 ├── prototype/        # Vanilla JS プロトタイプ
 └── docker-compose.yml
 ```
@@ -55,8 +58,8 @@ budgeting_app/
 ### 前提条件
 
 - Docker Desktop
-- Node.js 18+
-- Python 3.11+
+- Node.js 22 LTS
+- Python 3.12+（ローカル動作確認: 3.14.4、EC2 環境: 3.12）
 
 ### 1. データベース起動
 

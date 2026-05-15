@@ -1,0 +1,12 @@
+# Terraform 状態・秘密情報（コミット禁止）
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+*.tfvars
+*.pem
+
+# ローカル環境依存
+.terraform.override.tf
+override.tf
+
+# .terraform.lock.hcl はコミット対象（プロバイダーバージョン固定）

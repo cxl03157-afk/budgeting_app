@@ -5,7 +5,7 @@
 | レイヤー | 技術 | バージョン |
 |---------|------|-----------|
 | フロントエンド | Vue.js 3 + TypeScript + Vuetify 3 | Vue 3.5.34 / Vuetify 3.12.6 / TypeScript 6.0.2 |
-| バックエンド | Python + FastAPI + SQLAlchemy | Python 3.14 / FastAPI 0.136.1 / SQLAlchemy 2.0.49 |
+| バックエンド | Python + FastAPI + SQLAlchemy | Python 3.12+（ローカル: 3.14.4 / EC2: 3.12） / FastAPI 0.136.1 / SQLAlchemy 2.0.49 |
 | バリデーション | Pydantic | 2.13.4 |
 | マイグレーション | Alembic | 1.18.4 |
 | MySQL ドライバー | PyMySQL | 1.1.3 |
@@ -79,22 +79,26 @@
 
 | サービス | 用途 | 選定理由 |
 |---------|------|---------|
-| S3 + CloudFront | フロントエンドホスティング | 静的アセットの配信に最適・無料枠でまかなえる |
-| EC2 t2.micro | バックエンド（FastAPI）ホスティング | 無料枠（12ヶ月）内で稼働可能 |
-| RDS db.t3.micro (MySQL) | データベース | マネージドDBで運用負荷を低減。無料枠で利用可能 |
+| EC2 t2.micro (Amazon Linux 2023) | Nginx + FastAPI ホスティング | 無料枠（12ヶ月）内で稼働可能。Nginx で同一オリジン配信のため CORS 設定不要 |
+| RDS db.t3.micro (MySQL 8.4) | データベース | マネージドDBで運用負荷を低減。無料枠で利用可能 |
+| VPC / セキュリティグループ | ネットワーク分離 | EC2 は my_ip/32 のみ許可、RDS は EC2 SG からのみ許可 |
 
 **構成図（概要）:**
 
 ```
-ブラウザ
+ブラウザ（my_ip のみ）
   │
-  ├─── HTTPS ──► CloudFront ──► S3
-  │                              （Vue.js SPA）
-  │
-  └─── HTTPS ──► EC2（FastAPI）
-                     │
-                     └─── MySQL ──► RDS
+  └─── HTTP:80 ──► EC2 t2.micro
+                     ├─ Nginx :80
+                     │    ├─ /        → Vue.js SPA（/usr/share/nginx/html）
+                     │    └─ /api/*   → uvicorn 127.0.0.1:8000
+                     └─ FastAPI（uvicorn）
+                          │
+                          └─── MySQL:3306 ──► RDS db.t3.micro
+                                              （プライベートサブネット）
 ```
+
+**インフラ定義:** `infra/terraform/` に Terraform コードあり。詳細は [docs/infrastructure.md](infrastructure.md) を参照。
 
 ---
 

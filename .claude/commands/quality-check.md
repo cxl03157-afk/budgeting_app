@@ -31,8 +31,7 @@
 ## フェーズ2: 最終版（Vue.js + FastAPI + MySQL）※実装開始時に更新
 
 ### フロントエンド
-- [ ] `npm run lint` がエラーなし（ESLint）
-- [ ] `npm run type-check` がエラーなし（TypeScript）
+- [ ] `npm run build`（vue-tsc + vite build）がエラーなし（型エラー・未使用変数を含めて検出）
 - [ ] 未使用の import・変数が存在しないか
 - [ ] API エラー時にユーザーへ通知されているか（サイレント失敗は禁止）
 - [ ] HTTP レスポンスの `!response.ok` チェックが実装されているか
@@ -41,8 +40,11 @@
 - [ ] `pytest` が全テストパス
 - [ ] 参照系エンドポイントに `readonly=True` トランザクションが設定されているか
 - [ ] SQL クエリは SQLAlchemy のパラメータバインドを使用しているか（生SQL禁止）
-- [ ] バリデーションエラーは HTTP 400 で返却されているか
+- [ ] HTTPステータスコードが適切か（バリデーションエラー: 400、リソース未発見: 404）
+- [ ] DB更新処理（`db.commit()`）に try-except + rollback が実装されているか
+- [ ] エラーメッセージは日本語で統一されているか
 - [ ] 新しいエンドポイントが CORS 設定に含まれているか
+- [ ] `allow_methods` / `allow_headers` が `["*"]` のままになっていないか
 
 ### データベース
 - [ ] マイグレーションファイルが追加・更新されているか
@@ -54,8 +56,17 @@
 
 ### インフラ（AWS デプロイ時）
 - [ ] RDS がパブリックアクセス不可になっているか
-- [ ] セキュリティグループが最小権限になっているか
+- [ ] セキュリティグループが最小権限になっているか（HTTP/SSH は my_ip/32 のみ、RDS は EC2 SG のみ）
 - [ ] 環境変数が EC2 の Systems Manager Parameter Store 等で管理されているか
+- [ ] `terraform apply` 直後にコンソールログで user_data.sh の完了を確認したか
+      （`aws ec2 get-console-output` で "Failed to run" が含まれていないか確認）
+      HTTP 疎通確認より先にコンソールログを確認することで早期検出できる
+- [ ] AL2023 でのパッケージ名が正しいか（例: `mysql` は存在しない → `mariadb105` を使用）
+- [ ] SSH コマンドをパイプ（`| tail` 等）で繋いだ場合、exit code が隠れていないか
+      成否は dist の有無など**結果物**で確認する
+- [ ] t2.micro でのフロントエンドビルドはローカルで実施して SCP でアップロードしているか
+      （Node.js の V8 ヒープ不足により EC2 上での `npm run build` は OOM でクラッシュする）
+      ※ スワップを追加しても V8 ヒープ制限は変わらないため解決しない（pip install には有効）
 
 ---
 
